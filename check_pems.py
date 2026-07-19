@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 def check_dataset(dataset_name, data_dir="datasets"):
     # 检查PEMS数据集基础信息 区分真实0值与异常缺失
-    file_path = f'STSGCN_data/{data_dir}/{dataset_name}.npz'
+    file_path = f'STGCN_data/{data_dir}/{dataset_name}.npz'
     if not os.path.exists(file_path): # 若该文件不存在，直接返回一条提示字符串
         return f"{dataset_name}文件不存在: {file_path}"
 

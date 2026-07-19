@@ -1,0 +1,44 @@
+{
+    "SEED": 42,
+    "DEVICE": "cuda:0",
+    "NUM_WORKERS": 0,
+
+    "DATASET_NAME": "PEMS04",
+    "DATA_FILE_PATH": "STGCN_data/PEMS04/PEMS04.npz",
+    "ADJ_FILE_PATH": "STGCN_data/PEMS04/adj_PEMS04.pkl",
+
+    "INPUT_LENGTH": 12,
+    "OUTPUT_LENGTH": 12,
+    "NUM_NODES": 307,
+    "NUM_FEATURES": 3,
+
+    "MODEL_NAME": "STGCN",
+    "MODEL_ARGS": {
+        "Kt": 3,
+        "Ks": 3,
+        "blocks": [[1, 8, 8], [8, 8, 16]],
+        "dropout": 0.0,
+        "graph_conv_type": "cheb_conv"
+    },
+
+    "TRAIN_NUM_EPOCHS": 1,
+    "TRAIN_BATCH_SIZE": 8,
+    "TRAIN_LEARNING_RATE": 0.001,
+    "TRAIN_WEIGHT_DECAY": 0.0001,
+    "TRAIN_EARLY_STOPPING_PATIENCE": -1,
+
+    "VAL_BATCH_SIZE": 8,
+    "TEST_BATCH_SIZE": 8,
+
+    "LOSS_FUNCTION": "masked_mae",
+    "METRICS": ["MAE", "RMSE", "MAPE"],
+
+    "LOG_DIR": "outputs/smoke_STGCN_PEMS04",
+    "SAVE_MODEL": false,
+    "PRINT_FREQ": 1,
+
+    "SMOKE_TEST_MODE": true,
+    "MAX_TRAIN_SAMPLES": 100,
+    "MAX_VAL_SAMPLES": 50,
+    "MAX_TEST_SAMPLES": 50
+}

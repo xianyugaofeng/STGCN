@@ -13,7 +13,7 @@ VAL_RATIO = 0.2
 TEST_RATIO = 0.2
 
 def import_dataset(dataset_name, data_dir="datasets"):
-    file_path = f'STSGCN_data/{data_dir}/{dataset_name}.npz'
+    file_path = f'STGCN_data/{data_dir}/{dataset_name}.npz'
     if not os.path.exists(file_path): # 若该文件不存在，直接返回一条提示字符串
         print(f"{dataset_name}文件不存在: {file_path}")
         return f"{dataset_name}文件不存在: {file_path}"
