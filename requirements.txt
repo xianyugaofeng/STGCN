@@ -1,0 +1,13 @@
+easy-torch==1.3.3
+easydict
+packaging
+setproctitle
+pandas
+scikit-learn
+tables
+sympy
+openpyxl
+setuptools
+tqdm==4.67.1
+tensorboard==2.18.0
+transformers==4.40.1
