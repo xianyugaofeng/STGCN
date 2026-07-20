@@ -30,42 +30,6 @@ def import_dataset(dataset_name, data_dir="datasets"):
         data = data[:, :, 0] # 取第一个特征流量
     return data
 
-def generate_simulated_pems_data(NUM_NODES, days):
-    # 生成模拟的PEMS风格数据用于展示
-    # 包含趋势，每日和每周的周期性及噪声
-    TIME_STEPS_PER_DAY = 288
-    total_steps = days * TIME_STEPS_PER_DAY
-    data = np.zeros((total_steps, NUM_NODES))
-    # 计算出总的时间步数，并初始化一个全零的二维数组，形状为(时间步, 节点数)
-
-    for t in range(total_steps):
-        # 基础流量 所有节点、所有时刻共有的背景流量值，相当于流量基线的平均值
-        base_flow = 50
-
-        # 日的周期性(白天高，晚上低)
-        time_of_day = t % TIME_STEPS_PER_DAY # 当前时间步在一天内的序号
-        day_factor = 20 * np.sin(2 * np.pi * time_of_day / TIME_STEPS_PER_DAY - np.pi / 2) + 20
-        # 正弦函数的参数设定使其成为一个周期刚好为1天的波形
-        # 模拟了白天的流量高峰与夜间的低谷
-
-        # 周的周期性(工作日高，周末低)
-        day_of_week = (t // TIME_STEPS_PER_DAY) % 7
-        week_factor = 10 if day_of_week < 5 else 5
-        # 模拟了工作日的交通流量整体高于周末的规律
-
-        # 随机噪声
-        noise = np.random.normal(0, 5, NUM_NODES) # 为每个节点随机生成一个固定的流量差异值
-
-        # 不同节点的基础差异
-        node_bias = np.random.uniform(0, 10, NUM_NODES)
-        # 均值为 0、标准差为 5 的正态分布随机噪声
-
-        data[t] = base_flow + day_factor + week_factor + node_bias + noise # 该时间步所有节点的流量值
-
-    # 要确保非负
-    data = np.maximum(data, 0)
-    return data
-
 def calculate_metrics(y_true, y_pred):
     # 计算MAE RMSE MAPE
     # 避免除以零
