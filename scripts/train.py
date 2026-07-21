@@ -6,10 +6,9 @@ from typing import Dict
 import json
 
 # 确保项目根目录在sys.path中，以便正确导入basicts模块
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import torch
-from easytorch import launcher
 
 def parse_args() -> argparse.Namespace:
     # 用来说明这个函数会返回什么类型的数据,用来存放命令行解析后的所有参数
@@ -20,7 +19,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('-c', '--cfg',
                         type=str,
                         required=True,
-                        help='配置文件路径(例如:configs/STGCN_PEMS04.py'
+                        help='配置文件路径(例如:configs/STGCN_PEMS04.json)'
     )
 
     # 分布式训练参数
@@ -138,6 +137,38 @@ def main():
     config = load_config(args.cfg)
 
     # 命令行参数覆盖
-    if args.opt:
-        print(f'[INFO]应用命令行参数覆盖: {args.cfg}')
+    if args.opts:
+        print(f'[INFO]应用命令行参数覆盖: {args.opts}')
         config = override_config(config, args.opts)
+
+    # 设置GPU环境
+    if args.gpus is not None:
+        os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
+
+    # 设置随机种子
+    from basicts.utils import set_random_seed
+    set_random_seed(config.get('SEED', 42))
+
+    # 加载数据集
+    from basicts.datasets import build_dataloader
+    print('[INFO] Loading training data...')
+    train_loader, adj_matrix = build_dataloader(config, mode='train')
+    
+    print('[INFO] Loading validation data...')
+    val_loader, _ = build_dataloader(config, mode='val')
+    
+    # 创建Runner
+    from basicts.runners import get_runner
+    runner_name = config.get('RUNNER', 'BaseRunner')
+    runner = get_runner(runner_name)(config)
+    
+    # 设置邻接矩阵
+    if adj_matrix is not None:
+        runner.adj_matrix = adj_matrix
+        print(f'[INFO] Adjacency matrix shape: {adj_matrix.shape}')
+
+    # 开始训练
+    runner.run(train_loader, val_loader)
+
+if __name__ == '__main__':
+    main()

@@ -17,7 +17,7 @@ STCGN/
 │   ├── runners/                       # Runner 模块
 │   │   ├── __init__.py
 │   │   ├── base_runner.py             # 基础训练/验证/测试逻辑
-│   │   └── runner_zoo.py              # 各种 Runner 实现
+│   │   └── runner_zoo.py              # 各种Runner实现
 │   │
 │   ├── models/                        # 模型定义
 │   │   ├── __init__.py
