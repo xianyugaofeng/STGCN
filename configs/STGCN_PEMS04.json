@@ -35,5 +35,9 @@
 
     "LOG_DIR": "outputs/STGCN_PEMS04",
     "SAVE_MODEL": true,
-    "PRINT_FREQ": 10
+    "PRINT_FREQ": 10,
+
+    "MAX_TRAIN_SAMPLES": 100,
+    "MAX_VAL_SAMPLES": 100,
+    "MAX_TEST_SAMPLES": 100
 }
