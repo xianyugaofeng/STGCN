@@ -86,11 +86,10 @@ class BaseRunner:
     
     def _init_scheduler(self):
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, mode='min', factor=0.5, patience=10, verbose=True
+            self.optimizer, mode='min', factor=0.5, patience=10
         )
         # factor: 当指标停止改善时，学习率会乘以这个因子
         # patience: 允许连续多少个epoch验证指标没有改善，之后才触发学习率下降
-        # verbose=True: 触发学习率下降时，会打印一条日志
         return scheduler
 
         # 创建了一个ReduceLROnPlateau调度器，并绑定到之前创建的优化器self.optimizer
@@ -224,8 +223,12 @@ class BaseRunner:
                 self.logger.log_val_metrics(epoch, val_loss, val_metrics)
                 
                 if self.scheduler is not None:
+                    old_lr = self.optimizer.param_groups[0]['lr']
                     self.scheduler.step(val_loss)
-                
+                    new_lr = self.optimizer.param_groups[0]['lr']
+                    if new_lr < old_lr:
+                        print(f'Epoch {epoch}: reducing learning rate to {new_lr}')
+
                 if val_loss < self.best_val_loss:
                     self.best_val_loss = val_loss
                     self.best_val_metrics = val_metrics

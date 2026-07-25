@@ -1,6 +1,6 @@
 {
     "SEED": 42,
-    "DEVICE": "cuda:1",
+    "DEVICE": "cuda:0",
     "NUM_WORKERS": 2,
 
     "DATASET_NAME": "PEMS04",
@@ -18,7 +18,7 @@
     "MODEL_ARGS": {
         "Kt": 3,
         "Ks": 3,
-        "blocks": [[1, 32, 64], [64, 64, 128], [128, 128, 256]],
+        "blocks": [[3, 32, 64], [64, 64, 128], [128, 128, 256]],
         "dropout": 0.1,
         "graph_conv_type": "cheb_conv"
     },

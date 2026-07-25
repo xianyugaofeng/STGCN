@@ -134,6 +134,7 @@ class STGCN(nn.Module):
         self.num_nodes = num_nodes
         self.input_length = input_length
         self.output_length = output_length
+        self.num_features = num_features
 
         # Build STConv blocks
         self.st_conv_blocks = nn.ModuleList()
@@ -186,7 +187,7 @@ class STGCN(nn.Module):
         # Forward through STConv blocks
         for block in self.st_conv_blocks:
             x = block(x, laplacian) # (batch, in_channels, input_length, num_nodes)
-        # 依次将数据通过所有时空卷积块 block(x, laplacian)调用的是STConvBlock的forward方法
+        # 依次将数据通过所有时空卷积块block(x, laplacian)调用的是STConvBlock的forward方法
 
         # Output layer
         x = self.output_layer(x) # 将特征通道数从last_out_channels压缩为output_length

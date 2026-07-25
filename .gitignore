@@ -10,4 +10,11 @@
 /httpRequests/
 /.idea/
 /STGCN_IJCAI18/
-
+/basicts/models/STGCN/__pycache__/
+/basicts/models/__pycache__/
+/basicts/__pycache__/
+/basicts/losses/__pycache__/
+/basicts/runners/__pycache__/
+/basicts/datasets/__pycache__/
+/basicts/metrics/__pycache__/
+/basicts/utils/__pycache__/

@@ -16,7 +16,7 @@
     "MODEL_ARGS": {
         "Kt": 3,
         "Ks": 3,
-        "blocks": [[1, 8, 8], [8, 8, 16]],
+        "blocks": [[3, 8, 8], [8, 8, 16]],
         "dropout": 0.0,
         "graph_conv_type": "cheb_conv"
     },
