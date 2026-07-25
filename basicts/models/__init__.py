@@ -1,3 +1,12 @@
-from .stgcn import STGCN
+from .STGCN import STGCN
 
-__all__ = ['STGCN']
+MODEL_ZOO = {
+    'STGCN': STGCN,
+}
+
+def get_model(model_name):
+    if model_name not in MODEL_ZOO:
+        raise ValueError(f"Model {model_name} not found in MODEL_ZOO")
+    return MODEL_ZOO[model_name]
+
+__all__ = ['STGCN', 'get_model']

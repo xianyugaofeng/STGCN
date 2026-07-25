@@ -33,18 +33,19 @@ class MaskedMAPELoss(nn.Module):
     # Masked Mean Absolute Percentage Error Loss
     def __init__(self, mask_value=0.0):
         super(MaskedMAPELoss, self).__init__()
-        self.masked_value = masked_value
+        self.mask_value = mask_value
     
     def forward(self, pred, target):
         mask = (target != self.mask_value).float()
-        loss = torch.abs((target - pred) / target) * mask * 100
+        eps = 1e-8
+        loss = torch.abs((target - pred) / (target + eps)) * mask * 100
         loss = loss.sum() / mask.sum()
         return loss
 
 LOSS_ZOO = {
     'mae': nn.L1Loss(),
     'mse': nn.MSELoss(),
-    'mape': nn.MAPELoss(),
+    'mape': MaskedMAPELoss(),
     'masked_mae': MaskedMAELoss(),
     'masked_mse': MaskedMSELoss(),
     'masked_mape': MaskedMAPELoss()

@@ -13,6 +13,8 @@
     "NUM_FEATURES": 3,
 
     "MODEL_NAME": "STGCN",
+    "MODEL": "basicts.models.STGCN",
+    "RUNNER": "BaseRunner",
     "MODEL_ARGS": {
         "Kt": 3,
         "Ks": 3,

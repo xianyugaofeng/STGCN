@@ -5,7 +5,7 @@ import numpy as np
 
 class ChebConv(nn.Module):
     # Chebyshev Graph Convolution
-    def __init__(self, in_channels, out_Channels, K, bias=True):
+    def __init__(self, in_channels, out_channels, K, bias=True):
         super(ChebConv, self).__init__()
         self.K = K # 保存多项式的阶数，供前向传播时使用
         self.in_channels = in_channels
@@ -13,9 +13,9 @@ class ChebConv(nn.Module):
         self.weight = nn.Parameter(torch.Tensor(K, in_channels, out_channels))
         self._cached_lambda_max = None
         if bias: # bias布尔值，是否添加可学习的偏置项
-            self.bias = nn.Paramter(torch.Tensor(out_channels))
+            self.bias = nn.Parameter(torch.Tensor(out_channels))
         else:
-            self.register_paramter('bias', None)
+            self.register_parameter('bias', None)
         
         self.reset_parameters()
 
@@ -38,7 +38,7 @@ class ChebConv(nn.Module):
         # returns: (batch, out_channels. num_nodes)
         batch_size, in_channels, num_nodes = x.size()
         # 先计算多项式矩阵
-        lambda_max = get_lambda_max_eigh(laplacian)
+        lambda_max = self.get_lambda_max_eigh(laplacian)
 
         L_scaled = (2.0/lambda_max) * laplacian - torch.eye(num_nodes, device=x.device)
         laplacian_power = [torch.eye(num_nodes, device=x.device), L_scaled]
@@ -64,6 +64,7 @@ class ChebConv(nn.Module):
             # 加到output上，为每个输出通道增加一个可学习的偏置
         return output
 
+    @staticmethod
     def get_lambda_max_eigh(laplacian):
         # 对称矩阵(N,N)
         eigenvalues = torch.linalg.eigvalsh(laplacian)
@@ -96,9 +97,9 @@ class STConvBlock(nn.Module):
         if graph_conv_type == 'cheb_conv':
             self.spatial_conv = ChebConv(hidden_channels, hidden_channels, Ks)
         else:
-            raise ValueError(f"Unsupported graph_conv_type:" {graph_conv_type})
+            raise ValueError(f"Unsupported graph_conv_type: {graph_conv_type}")
         self.temporal_conv2 = TemporalConv(hidden_channels, out_channels, Kt)
-        self.batch_norm == nn.BatchNorm2d(out_channels)
+        self.batch_norm = nn.BatchNorm2d(out_channels)
         self.dropout = nn.Dropout(dropout)
     
     def forward(self, x, laplacian):
@@ -123,7 +124,7 @@ class STConvBlock(nn.Module):
 class STGCN(nn.Module):
     # Spatio-Temporal Graph Convolutional Network
     def __init__(self, Kt=3, Ks=3, blocks=[[1, 32, 64], [64, 64, 128], [128, 128, 256]],
-                dropout=0.1, graph_conv_type='cheb_co nv', num_nodes=307, num_features=3,
+                dropout=0.1, graph_conv_type='cheb_conv', num_nodes=307, num_features=3,
                 input_length=12, output_length=12):
         super(STGCN, self).__init__()
         self.Kt = Kt
@@ -164,7 +165,7 @@ class STGCN(nn.Module):
         if x.size(1) == self.input_length:
             # (batch, input_length, num_nodes, num_features) 
             # -> (batch, num_features, input_length, num_nodes)
-            x.permute(0, 3, 1, 2).contiguous()
+            x = x.permute(0, 3, 1, 2).contiguous()
         elif x.size(1) == self.num_features:
             # Already in (batch, num_features, input_length, num_nodes) format
             pass

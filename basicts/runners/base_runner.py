@@ -1,6 +1,7 @@
 import os
 import torch
 import torch.nn as nn
+import numpy as np
 from tqdm import tqdm
 from datetime import datetime
 import json
@@ -9,6 +10,12 @@ class BaseRunner:
     # 把训练过程中所有需要反复编写的通用逻辑
     def __init__(self, config):
         self.config = config
+        
+        # 创建logger（必须在device之前创建，因为_init_device会使用logger）
+        from basicts.utils import Logger
+        self.log_dir = config.get('LOG_DIR', 'outputs/STGCN_PEMS04')
+        self.logger = Logger(self.log_dir)
+        
         self.device = self._init_device()
         self.model = self._init_model() 
         # _init_model()：构建具体的网络结构并移动到self.device
@@ -19,10 +26,6 @@ class BaseRunner:
         self.scheduler = self._init_scheduler()
         # _init_scheduler()：学习率调度器
         self.adj_matrix = None
-        
-        from basicts.utils import Logger
-        self.log_dir = config.get('LOG_DIR', 'outputs/STGCN_PEMS04')
-        self.logger = Logger(self.log_dir)
         
         self.num_epochs = config.get('TRAIN_NUM_EPOCHS', 100)
         self.print_freq = config.get('PRINT_FREQ', 10)
