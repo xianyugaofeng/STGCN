@@ -52,7 +52,7 @@ class ChebConv(nn.Module):
             tmp = torch.matmul(x, laplacian_power[k])
             # (batch, in_channels, num_nodes) @ (in_channels, out_channels) -> (batch, out_channels, num_nodes)
             # 将tmp的维度转置，使每个节点变成一个in_channels维的行向量
-            # 所有的num_node和batch都被自动广播处理
+            # 所有的num_node和batch都被自动广播处理 对每个样本的每个节点独立执行线性变换
             tmp = torch.matmul(tmp.transpose(1, 2), self.weight[k]).transpose(1, 2)
             outputs.append(tmp) # 收集k阶的结果
         
@@ -150,9 +150,9 @@ class STGCN(nn.Module):
 
         # Output layer
         last_out_channels = blocks[-1][2]
-        self.output_layer = nn.Conv2d(last_out_channels, output_length, kernel_size=(1,1))
-        # (B, output_length, T, N)
-        # 不改变时间维度T和空间节点数N 仅在通道维度做线性组合 
+        # 输出层将通道数从last_out_channels变为num_features
+        # (B, last_out_channels, T, N) -> (B, num_features, T, N)
+        self.output_layer = nn.Conv2d(last_out_channels, num_features, kernel_size=(1,1))
 
         # Learnable laplacian (will be replaced if provided)
         self.laplacian = nn.Parameter(torch.randn(num_nodes, num_nodes))
@@ -190,17 +190,11 @@ class STGCN(nn.Module):
         # 依次将数据通过所有时空卷积块block(x, laplacian)调用的是STConvBlock的forward方法
 
         # Output layer
-        x = self.output_layer(x) # 将特征通道数从last_out_channels压缩为output_length
-        # (batch, last_out_channels, T, num_nodes) -> (batch, output_length, input_length, num_nodes)
+        x = self.output_layer(x) # (batch, last_out_channels, T, N) -> (batch, num_features, T, N)
         
-
-        # Take last time step output
-        x = x[:, :, -1, :] # (batch, output_length, num_nodes)
-        # 最后一个时间步的特征汇聚了整个输入序列的信息
-
-        # Reshape to match expected output
-        x = x.unsqueeze(-1).repeat(1, 1, 1, self.num_features)
-        # 在最后添加一个维度，形状变为(batch, output_length, num_nodes, 1)
-        # 沿着新维度重复self.num_features次
-        # (batch, output_length, num_nodes, num_features)
+        # 调整维度顺序：(batch, num_features, output_length, num_nodes)
+        # -> (batch, output_length, num_nodes, num_features)
+        x = x.permute(0, 2, 3, 1).contiguous()
+        # permute后维度顺序变为：batch, time_steps, num_nodes, features
+        
         return x

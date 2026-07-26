@@ -29,7 +29,7 @@ class BaseRunner:
         
         self.num_epochs = config.get('TRAIN_NUM_EPOCHS', 100)
         self.print_freq = config.get('PRINT_FREQ', 10)
-        self.early_stopping_patience = config.get('TRAIN_EARLY_STOPPING_PATIENCE', 20)
+        self.early_stopping_patience = config.get('TRAIN_EARLY_STOPPING_PATIENCE', 10)
         self.save_model = config.get('SAVE_MODEL', True)
         
         from basicts.metrics import compute_metrics
