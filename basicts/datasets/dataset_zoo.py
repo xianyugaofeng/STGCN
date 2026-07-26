@@ -29,8 +29,33 @@ class PEMSDataset(Dataset):
         y = self.data[mid:end]    # (output_length, num_nodes, num_features)
         return x, y
 
+class Normalizer:
+    # Z-score归一化 零均值单位方差
+    def __init__(self):
+        self.mean = None
+        self.std = None
+    
+    def fit(self, data):
+        # data: (num_timesteps, num_nodes, num_features)
+        self.mean = np.mean(data, axis=(0, 1), keepdims=True)  # (1, 1, num_features)
+        # 在时间步和节点两个维度上计算统计量，得到的是每个特征独立的均值和标准差
+        self.std = np.std(data, axis=(0, 1), keepdims=True)    # (1, 1, num_features)
+        # 这样transform中的减法和除法可以自动广播到原数据的(T, N, F)形状
+        self.std[self.std < 1e-8] = 1e-8  # 避免除以0 将小于1e-8的标准差替换为1e-8，避免除以零错误
+        print(f"[INFO] Normalizer fitted: mean={self.mean.squeeze()}, std={self.std.squeeze()}")
+    
+    def transform(self, data):
+        return (data - self.mean) / self.std
+        # 加减乘除都可以依靠numpy的广播机制完成
+    
+    def inverse_transform(self, data):
+        return data * self.std + self.mean
+    
+    # Z-score标准化后，每个特征的均值为0，标准差为1
+
 def load_pems_data(data_file_path, adj_file_path=None, max_train_samples=None, 
-                   max_val_samples=None, max_test_samples=None, smoke_test_mode=False):
+                   max_val_samples=None, max_test_samples=None, smoke_test_mode=False,
+                   normalize=True):
     # Load PEMS dataset
     print(f"[INFO] Loading data from {data_file_path}")
     
@@ -71,10 +96,20 @@ def load_pems_data(data_file_path, adj_file_path=None, max_train_samples=None,
         if max_test_samples:
             test_data = test_data[:max_test_samples + 12 + 12]
         # 形状均为(子集长度, num_nodes, num_features)
+    
+    # Z-score归一化（仅使用训练集统计量）
+    normalizer = None
+    if normalize:
+        normalizer = Normalizer()
+        normalizer.fit(train_data)
+        train_data = normalizer.transform(train_data)
+        val_data = normalizer.transform(val_data)
+        test_data = normalizer.transform(test_data)
+        print(f"[INFO] Data normalized using Z-score")
 
     print(f"[INFO] Data loaded: train={train_data.shape}, val={val_data.shape}, test={test_data.shape}")
     
-    return train_data, val_data, test_data, adj_matrix
+    return train_data, val_data, test_data, adj_matrix, normalizer
 
 def create_adjacency_from_csv(csv_path, num_nodes=None, symmetric=True,
                               default_diag=1.0, threshold=0.1,
@@ -149,27 +184,31 @@ def build_dataloader(config, mode='train'):
     batch_size = config.get(f'{mode.upper()}_BATCH_SIZE', 32)
     num_workers = config.get('NUM_WORKERS', 2)
     smoke_test_mode = config.get('SMOKE_TEST_MODE', False)
+    normalize = config.get('NORMALIZE', True)
     
     if mode == 'train':
-        train_data, val_data, test_data, adj_matrix = load_pems_data(
+        train_data, val_data, test_data, adj_matrix, normalizer = load_pems_data(
             data_file_path, adj_file_path,
             max_train_samples=config.get('MAX_TRAIN_SAMPLES'),
-            smoke_test_mode=smoke_test_mode
+            smoke_test_mode=smoke_test_mode,
+            normalize=normalize
         )
         dataset = PEMSDataset(train_data, input_length, output_length, mode='train')
     elif mode == 'val':
         # Reload to get validation data
-        train_data, val_data, test_data, adj_matrix = load_pems_data(
+        train_data, val_data, test_data, adj_matrix, normalizer = load_pems_data(
             data_file_path, adj_file_path,
             max_val_samples=config.get('MAX_VAL_SAMPLES'),
-            smoke_test_mode=smoke_test_mode
+            smoke_test_mode=smoke_test_mode,
+            normalize=normalize
         )
         dataset = PEMSDataset(val_data, input_length, output_length, mode='val')
     elif mode == 'test':
-        train_data, val_data, test_data, adj_matrix = load_pems_data(
+        train_data, val_data, test_data, adj_matrix, normalizer = load_pems_data(
             data_file_path, adj_file_path,
             max_test_samples=config.get('MAX_TEST_SAMPLES'),
-            smoke_test_mode=smoke_test_mode
+            smoke_test_mode=smoke_test_mode,
+            normalize=normalize
         )
         dataset = PEMSDataset(test_data, input_length, output_length, mode='test')
     else:
@@ -183,4 +222,4 @@ def build_dataloader(config, mode='train'):
         pin_memory=True # 多进程加载数据
     )
     
-    return dataloader, adj_matrix
+    return dataloader, adj_matrix, normalizer

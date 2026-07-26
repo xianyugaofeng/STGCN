@@ -13,6 +13,8 @@
     "NUM_FEATURES": 3,
 
     "MODEL_NAME": "STGCN",
+    "MODEL": "basicts.models.STGCN",
+    "RUNNER": "BaseRunner",
     "MODEL_ARGS": {
         "Kt": 3,
         "Ks": 3,
@@ -34,11 +36,11 @@
     "METRICS": ["MAE", "RMSE", "MAPE"],
 
     "LOG_DIR": "outputs/smoke_STGCN_PEMS04",
-    "SAVE_MODEL": false,
-    "PRINT_FREQ": 1,
+    "SAVE_MODEL": true,
+    "PRINT_FREQ": 10,
 
-    "SMOKE_TEST_MODE": true,
-    "MAX_TRAIN_SAMPLES": 100,
-    "MAX_VAL_SAMPLES": 50,
-    "MAX_TEST_SAMPLES": 50
+    "MAX_TRAIN_SAMPLES": null,
+    "MAX_VAL_SAMPLES": null,
+    "MAX_TEST_SAMPLES": null,
+    "NORMALIZE": true
 }

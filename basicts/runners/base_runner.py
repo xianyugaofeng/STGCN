@@ -39,6 +39,7 @@ class BaseRunner:
         self.best_val_loss = float('inf')
         self.best_val_metrics = {}
         self.patience_counter = 0
+        self.normalizer = None
     
     def _init_device(self):
         device_str = self.config.get('DEVICE', 'cuda:0')
@@ -140,6 +141,12 @@ class BaseRunner:
         total_preds = torch.cat(total_preds, dim=0)
         total_targets = torch.cat(total_targets, dim=0)
         # 沿batch维度dim=0拼接，获得整个epoch的完整预测矩阵和目标矩阵
+        
+        # 反归一化（如果有normalizer）
+        if self.normalizer is not None:
+            total_preds = torch.from_numpy(self.normalizer.inverse_transform(total_preds.numpy())).float()
+            total_targets = torch.from_numpy(self.normalizer.inverse_transform(total_targets.numpy())).float()
+        
         metrics = self.compute_metrics(total_preds, total_targets, self.metric_names)
         
         return avg_loss, metrics
@@ -169,6 +176,12 @@ class BaseRunner:
         avg_loss = total_loss / len(val_loader.dataset)
         total_preds = torch.cat(total_preds, dim=0)
         total_targets = torch.cat(total_targets, dim=0)
+        
+        # 反归一化（如果有normalizer）
+        if self.normalizer is not None:
+            total_preds = torch.from_numpy(self.normalizer.inverse_transform(total_preds.numpy())).float()
+            total_targets = torch.from_numpy(self.normalizer.inverse_transform(total_targets.numpy())).float()
+        
         metrics = self.compute_metrics(total_preds, total_targets, self.metric_names)
         
         return avg_loss, metrics

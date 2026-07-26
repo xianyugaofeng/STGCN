@@ -140,7 +140,7 @@ def evaluate_baseline(config):
     
     # 对比STGCN模型结果
     print("\n[INFO] STGCN Model Best Validation Metrics (from training):")
-    with open('outputs/STGCN_PEMS04/best_val_metrics.json', 'r', encoding='utf-8') as f:
+    with open('outputs/smoke_STGCN_PEMS04/best_val_metrics.json', 'r', encoding='utf-8') as f:
         best_val_metrics = json.load(f)
 
     stgcn_results = {

@@ -152,10 +152,10 @@ def main():
     # 加载数据集
     from basicts.datasets import build_dataloader
     print('[INFO] Loading training data...')
-    train_loader, adj_matrix = build_dataloader(config, mode='train')
+    train_loader, adj_matrix, normalizer = build_dataloader(config, mode='train')
     
     print('[INFO] Loading validation data...')
-    val_loader, _ = build_dataloader(config, mode='val')
+    val_loader, _, _ = build_dataloader(config, mode='val')
     
     # 创建Runner
     from basicts.runners import get_runner
@@ -166,6 +166,11 @@ def main():
     if adj_matrix is not None:
         runner.adj_matrix = adj_matrix
         print(f'[INFO] Adjacency matrix shape: {adj_matrix.shape}')
+    
+    # 设置normalizer
+    if normalizer is not None:
+        runner.normalizer = normalizer
+        print('[INFO] Normalizer set for inverse transform')
 
     # 开始训练
     runner.run(train_loader, val_loader)

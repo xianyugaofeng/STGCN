@@ -1,0 +1,153 @@
+2026-07-26 15:05:50,363 - INFO - Using GPU: cuda:0
+2026-07-26 15:05:51,260 - INFO - Model: STGCN
+2026-07-26 15:05:51,260 - INFO - Model args: {'Kt': 3, 'Ks': 3, 'blocks': [[3, 8, 8], [8, 8, 16]], 'dropout': 0.0, 'graph_conv_type': 'cheb_conv', 'num_nodes': 307, 'num_features': 3, 'input_length': 12, 'output_length': 12}
+2026-07-26 15:05:51,262 - INFO - Total parameters: 96,508
+2026-07-26 15:05:52,392 - INFO - ============================================================
+2026-07-26 15:05:52,392 - INFO - Training started at 2026-07-26 15:05:52.392649
+2026-07-26 15:05:52,393 - INFO - Config: {
+  "SEED": 42,
+  "DEVICE": "cuda:0",
+  "NUM_WORKERS": 0,
+  "DATASET_NAME": "PEMS04",
+  "DATA_FILE_PATH": "STGCN_data/PEMS04/PEMS04.npz",
+  "ADJ_FILE_PATH": "STGCN_data/PEMS04/adj_PEMS04.pkl",
+  "INPUT_LENGTH": 12,
+  "OUTPUT_LENGTH": 12,
+  "NUM_NODES": 307,
+  "NUM_FEATURES": 3,
+  "MODEL_NAME": "STGCN",
+  "MODEL": "basicts.models.STGCN",
+  "RUNNER": "BaseRunner",
+  "MODEL_ARGS": {
+    "Kt": 3,
+    "Ks": 3,
+    "blocks": [
+      [
+        3,
+        8,
+        8
+      ],
+      [
+        8,
+        8,
+        16
+      ]
+    ],
+    "dropout": 0.0,
+    "graph_conv_type": "cheb_conv",
+    "num_nodes": 307,
+    "num_features": 3,
+    "input_length": 12,
+    "output_length": 12
+  },
+  "TRAIN_NUM_EPOCHS": 1,
+  "TRAIN_BATCH_SIZE": 8,
+  "TRAIN_LEARNING_RATE": 0.001,
+  "TRAIN_WEIGHT_DECAY": 0.0001,
+  "TRAIN_EARLY_STOPPING_PATIENCE": -1,
+  "VAL_BATCH_SIZE": 8,
+  "TEST_BATCH_SIZE": 8,
+  "LOSS_FUNCTION": "masked_mae",
+  "METRICS": [
+    "MAE",
+    "RMSE",
+    "MAPE"
+  ],
+  "LOG_DIR": "outputs/smoke_STGCN_PEMS04",
+  "SAVE_MODEL": true,
+  "PRINT_FREQ": 10,
+  "MAX_TRAIN_SAMPLES": null,
+  "MAX_VAL_SAMPLES": null,
+  "MAX_TEST_SAMPLES": null
+}
+2026-07-26 15:05:52,393 - INFO - ============================================================
+2026-07-26 15:05:52,393 - INFO - 
+--- Epoch 1/1 ---
+2026-07-26 15:06:25,017 - INFO - Epoch 1 - Train Loss: 73.460483, MAE: 73.4556, RMSE: 141.0604, MAPE: 80.7376
+2026-07-26 15:06:29,516 - INFO - Epoch 1 - Val Loss: 49.642036, MAE: 49.5901, RMSE: 115.5386, MAPE: 55.4114
+2026-07-26 15:06:29,541 - INFO - Model saved to outputs/smoke_STGCN_PEMS04\model_epoch_1.pth
+2026-07-26 15:06:29,541 - INFO - ------------------------------------------------------------
+2026-07-26 15:06:29,541 - INFO - 
+============================================================
+2026-07-26 15:06:29,541 - INFO - Training completed
+2026-07-26 15:06:29,541 - INFO - Best validation loss: 49.642036
+2026-07-26 15:06:29,542 - INFO - Best validation metrics: {'MAE': 49.590087890625, 'RMSE': 115.53857421875, 'MAPE': 55.41135787963867}
+2026-07-26 15:06:29,543 - INFO - Training finished at 2026-07-26 15:06:29.543779
+2026-07-26 15:06:29,543 - INFO - ============================================================
+2026-07-26 16:09:38,390 - INFO - Using GPU: cuda:0
+2026-07-26 16:09:39,137 - INFO - Model: STGCN
+2026-07-26 16:09:39,137 - INFO - Model args: {'Kt': 3, 'Ks': 3, 'blocks': [[3, 8, 8], [8, 8, 16]], 'dropout': 0.0, 'graph_conv_type': 'cheb_conv', 'num_nodes': 307, 'num_features': 3, 'input_length': 12, 'output_length': 12}
+2026-07-26 16:09:39,137 - INFO - Total parameters: 96,508
+2026-07-26 16:09:39,735 - INFO - ============================================================
+2026-07-26 16:09:39,735 - INFO - Training started at 2026-07-26 16:09:39.735803
+2026-07-26 16:09:39,735 - INFO - Config: {
+  "SEED": 42,
+  "DEVICE": "cuda:0",
+  "NUM_WORKERS": 0,
+  "DATASET_NAME": "PEMS04",
+  "DATA_FILE_PATH": "STGCN_data/PEMS04/PEMS04.npz",
+  "ADJ_FILE_PATH": "STGCN_data/PEMS04/adj_PEMS04.pkl",
+  "INPUT_LENGTH": 12,
+  "OUTPUT_LENGTH": 12,
+  "NUM_NODES": 307,
+  "NUM_FEATURES": 3,
+  "MODEL_NAME": "STGCN",
+  "MODEL": "basicts.models.STGCN",
+  "RUNNER": "BaseRunner",
+  "MODEL_ARGS": {
+    "Kt": 3,
+    "Ks": 3,
+    "blocks": [
+      [
+        3,
+        8,
+        8
+      ],
+      [
+        8,
+        8,
+        16
+      ]
+    ],
+    "dropout": 0.0,
+    "graph_conv_type": "cheb_conv",
+    "num_nodes": 307,
+    "num_features": 3,
+    "input_length": 12,
+    "output_length": 12
+  },
+  "TRAIN_NUM_EPOCHS": 1,
+  "TRAIN_BATCH_SIZE": 8,
+  "TRAIN_LEARNING_RATE": 0.001,
+  "TRAIN_WEIGHT_DECAY": 0.0001,
+  "TRAIN_EARLY_STOPPING_PATIENCE": -1,
+  "VAL_BATCH_SIZE": 8,
+  "TEST_BATCH_SIZE": 8,
+  "LOSS_FUNCTION": "masked_mae",
+  "METRICS": [
+    "MAE",
+    "RMSE",
+    "MAPE"
+  ],
+  "LOG_DIR": "outputs/smoke_STGCN_PEMS04",
+  "SAVE_MODEL": true,
+  "PRINT_FREQ": 10,
+  "MAX_TRAIN_SAMPLES": null,
+  "MAX_VAL_SAMPLES": null,
+  "MAX_TEST_SAMPLES": null,
+  "NORMALIZE": true
+}
+2026-07-26 16:09:39,735 - INFO - ============================================================
+2026-07-26 16:09:39,735 - INFO - 
+--- Epoch 1/1 ---
+2026-07-26 16:10:15,083 - INFO - Epoch 1 - Train Loss: 0.340098, MAE: 18.5859, RMSE: 42.0627, MAPE: 28.8806
+2026-07-26 16:10:20,456 - INFO - Epoch 1 - Val Loss: 0.275317, MAE: 13.8464, RMSE: 31.5202, MAPE: 21.8100
+2026-07-26 16:10:20,468 - INFO - Model saved to outputs/smoke_STGCN_PEMS04\model_epoch_1.pth
+2026-07-26 16:10:20,468 - INFO - ------------------------------------------------------------
+2026-07-26 16:10:20,468 - INFO - 
+============================================================
+2026-07-26 16:10:20,469 - INFO - Training completed
+2026-07-26 16:10:20,469 - INFO - Best validation loss: 0.275317
+2026-07-26 16:10:20,469 - INFO - Best validation metrics: {'MAE': 13.846352577209473, 'RMSE': 31.52017593383789, 'MAPE': 21.81000328063965}
+2026-07-26 16:10:20,469 - INFO - Training finished at 2026-07-26 16:10:20.469292
+2026-07-26 16:10:20,469 - INFO - ============================================================
