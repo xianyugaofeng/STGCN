@@ -5,7 +5,7 @@
 1. 时间卷积1：使用 GLU 门控，捕获时间依赖
 2. 空间卷积：使用 Chebyshev 图卷积，捕获空间依赖
 3. 时间卷积2：进一步提取时空特征
-4. BatchNorm + Dropout**：正则化
+4. BatchNorm + Dropout：正则化
 
 ## 🧪 Baseline 评估
 
