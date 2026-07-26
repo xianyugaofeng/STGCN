@@ -1,0 +1,81 @@
+{
+  "config": {
+    "DATA_FILE_PATH": "STGCN_data/PEMS04/PEMS04.npz",
+    "ADJ_FILE_PATH": "STGCN_data/PEMS04/adj_PEMS04.pkl",
+    "INPUT_LENGTH": 12,
+    "OUTPUT_LENGTH": 12,
+    "METRICS": [
+      "MAE",
+      "RMSE",
+      "MAPE"
+    ],
+    "LOG_DIR": "outputs/STGCN_PEMS04",
+    "MAX_TRAIN_SAMPLES": null,
+    "MAX_VAL_SAMPLES": null,
+    "MAX_TEST_SAMPLES": null
+  },
+  "baselines": {
+    "Last Value": {
+      "MAE": 11.59582805633545,
+      "RMSE": 29.208786010742188,
+      "MAPE": 16.81165313720703
+    },
+    "Mean Value": {
+      "MAE": 14.265541076660156,
+      "RMSE": 34.67471694946289,
+      "MAPE": 21.639049530029297
+    },
+    "Median Value": {
+      "MAE": 14.366847038269043,
+      "RMSE": 35.5267219543457,
+      "MAPE": 21.586414337158203
+    },
+    "Moving Average (3)": {
+      "MAE": 11.3694486618042,
+      "RMSE": 28.41839599609375,
+      "MAPE": 16.69961929321289
+    },
+    "Moving Average (6)": {
+      "MAE": 12.17775821685791,
+      "RMSE": 30.12940788269043,
+      "MAPE": 18.13445281982422
+    },
+    "Moving Average (12)": {
+      "MAE": 14.265541076660156,
+      "RMSE": 34.67471694946289,
+      "MAPE": 21.639049530029297
+    },
+    "Exponential Smoothing": {
+      "MAE": 17.16695213317871,
+      "RMSE": 41.245487213134766,
+      "MAPE": 26.180011749267578
+    }
+  },
+  "stgcn": {
+    "MAE": 13.846352577209473,
+    "RMSE": 31.52017593383789,
+    "MAPE": 21.81000328063965
+  },
+  "best_baseline": "Moving Average (3)",
+  "data_info": {
+    "train_shape": [
+      11894,
+      307,
+      3
+    ],
+    "val_shape": [
+      2548,
+      307,
+      3
+    ],
+    "test_shape": [
+      2550,
+      307,
+      3
+    ],
+    "input_length": 12,
+    "output_length": 12,
+    "num_nodes": 307,
+    "num_features": 3
+  }
+}

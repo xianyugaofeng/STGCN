@@ -92,11 +92,12 @@ def evaluate_baseline(config):
     output_length = config.get('OUTPUT_LENGTH', 12)
     
     print(f"\n[INFO] Loading data from {data_file_path}")
-    train_data, val_data, test_data, adj_matrix = load_pems_data(
+    train_data, val_data, test_data, adj_matrix, normalizer = load_pems_data(
         data_file_path, adj_file_path,
         max_train_samples=config.get('MAX_TRAIN_SAMPLES'),
         max_val_samples=config.get('MAX_VAL_SAMPLES'),
-        max_test_samples=config.get('MAX_TEST_SAMPLES')
+        max_test_samples=config.get('MAX_TEST_SAMPLES'),
+        normalize=True
     )
     
     print(f"[INFO] Data shapes: train={train_data.shape}, val={val_data.shape}, test={test_data.shape}")
@@ -107,9 +108,10 @@ def evaluate_baseline(config):
     print(f"[INFO] Test samples: x={test_x.shape}, y={test_y.shape}")
     
     # 转换为torch张量
-    test_x_tensor = torch.from_numpy(test_x).float()
-    test_y_tensor = torch.from_numpy(test_y).float()
-    
+    if normalizer is not None:
+        test_x_tensor = torch.from_numpy(normalizer.inverse_transform(test_x)).float()
+        test_y_tensor = torch.from_numpy(normalizer.inverse_transform(test_y)).float()
+        print(f"[INFO] Data inverse transformed to original scale")
     # 定义baseline模型
     baselines = {
         'Last Value': BaselineModels.last_value,
