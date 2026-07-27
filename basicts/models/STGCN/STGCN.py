@@ -4,18 +4,25 @@ import torch.nn.functional as F
 import numpy as np
 
 class ChebConv(nn.Module):
-    # Chebyshev Graph Convolution
-    def __init__(self, in_channels, out_channels, K, bias=True):
+    # Chebyshev Graph Convolution with Residual Connection
+    def __init__(self, in_channels, out_channels, K, bias=True, residual=True):
         super(ChebConv, self).__init__()
         self.K = K # 保存多项式的阶数，供前向传播时使用
         self.in_channels = in_channels
         self.out_channels = out_channels
+        self.residual = residual
         self.weight = nn.Parameter(torch.Tensor(K, in_channels, out_channels))
         self._cached_lambda_max = None
         if bias: # bias布尔值，是否添加可学习的偏置项
             self.bias = nn.Parameter(torch.Tensor(out_channels))
         else:
             self.register_parameter('bias', None)
+        
+        # Residual alignment: 1x1 conv to match channels
+        if self.residual and in_channels != out_channels:
+            self.residual_conv = nn.Conv1d(in_channels, out_channels, kernel_size=1)
+        else:
+            self.residual_conv = None
         
         self.reset_parameters()
 
@@ -38,6 +45,7 @@ class ChebConv(nn.Module):
         # returns: (batch, out_channels. num_nodes)
         batch_size, in_channels, num_nodes = x.size()
         # 先计算多项式矩阵
+        x_input = x
         lambda_max = self.get_lambda_max_eigh(laplacian)
 
         L_scaled = (2.0/lambda_max) * laplacian - torch.eye(num_nodes, device=x.device)
@@ -58,10 +66,20 @@ class ChebConv(nn.Module):
         
         output = torch.stack(outputs, dim=-1).sum(dim=-1)
         # stack在最后一维堆叠  沿K维求和，将所有阶的贡献加起来
+        
         if self.bias is not None:
             output = output + self.bias.unsqueeze(0).unsqueeze(-1)
             # 通过unsqueeze变成(1, out_channels, 1)以便广播
             # 加到output上，为每个输出通道增加一个可学习的偏置
+        
+        # Residual connection: output = ReLU(GraphConv(x) + align(x))
+        if self.residual:
+            if self.residual_conv is not None:
+                residual = self.residual_conv(x_input)
+            else:
+                residual = x_input
+            output = F.relu(output + residual)
+        
         return output
 
     @staticmethod
@@ -73,38 +91,57 @@ class ChebConv(nn.Module):
         return eigenvalues[-1].item() # 升序排列 将仅含一个元素的张量转换为Python标量
 
 class TemporalConv(nn.Module):
-    # Temporal Convolution with GLU
-    def __init__(self, in_channels, out_channels, kernel_size=3):
+    # Temporal Convolution with GLU and Residual Connection
+    def __init__(self, in_channels, out_channels, kernel_size=3, residual=True):
         super(TemporalConv, self).__init__()
+        self.residual = residual
         self.conv = nn.Conv2d(in_channels, out_channels * 2, kernel_size=(kernel_size, 1), 
                               padding=((kernel_size-1)//2 , 0)) 
         # (N, out_channels*2, T, V)
         # 只在时间维度上做卷积 在空间维度上不进行混合
         # 只在时间维度两端填充，保证输出的时间长度与输入相同；空间维度不填充
         self.gate = nn.GLU(dim=1) # 沿通道维度(dim=1)将数据分为两半
+        
+        # Residual alignment: 1x1 conv to match channels
+        if self.residual and in_channels != out_channels:
+            self.residual_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
+        else:
+            self.residual_conv = None
 
     def forward(self, x):
+        x_input = x
         x = self.conv(x) #(N, in_channels, T, V) ->(N, out_channels * 2, T, V)
         x = self.gate(x) # output = A ⊙ σ(B) -> (N, out_channels, T, V)
+        
+        # Residual connection: output = ReLU(TemporalConv(x) + align(x))
+        if self.residual:
+            if self.residual_conv is not None:
+                residual = self.residual_conv(x_input)
+            else:
+                residual = x_input
+            x = F.relu(x + residual)
+        
         return x
     
 class STConvBlock(nn.Module):
     # Spatio-Temporal Convolution Block
     def __init__(self, in_channels, hidden_channels, out_channels, Kt, Ks, 
-                 dropout=0.0, graph_conv_type='cheb_conv'):
+                 dropout=0.0, graph_conv_type='cheb_conv', residual=True):
         super(STConvBlock, self).__init__()
-        self.temporal_conv1 = TemporalConv(in_channels, hidden_channels, Kt)
+        self.residual = residual
+        # 内部卷积层各自使用残差连接，块级不再叠加残差
+        self.temporal_conv1 = TemporalConv(in_channels, hidden_channels, Kt, residual=residual)
         if graph_conv_type == 'cheb_conv':
-            self.spatial_conv = ChebConv(hidden_channels, hidden_channels, Ks)
+            self.spatial_conv = ChebConv(hidden_channels, hidden_channels, Ks, residual=residual)
         else:
             raise ValueError(f"Unsupported graph_conv_type: {graph_conv_type}")
-        self.temporal_conv2 = TemporalConv(hidden_channels, out_channels, Kt)
+        self.temporal_conv2 = TemporalConv(hidden_channels, out_channels, Kt, residual=residual)
         self.batch_norm = nn.BatchNorm2d(out_channels)
         self.dropout = nn.Dropout(dropout)
     
     def forward(self, x, laplacian):
         x = self.temporal_conv1(x)
-        x = F.relu(x)
+        # TemporalConv内部已包含ReLU和残差连接
 
         batch, channels, seq_len, nodes = x.size()
         x = x.permute(0, 2, 1, 3).contiguous().view(batch * seq_len, channels, nodes)
@@ -113,12 +150,14 @@ class STConvBlock(nn.Module):
         # 利用图的拉普拉斯矩阵laplacian，在每个时间步内沿nodes维度聚合邻居节点信息
         x = x.view(batch, seq_len, channels, nodes).permute(0, 2, 1, 3).contiguous()
         # 恢复原始维度顺序
-        x = F.relu(x)
+        # ChebConv内部已包含ReLU和残差连接
 
         x = self.temporal_conv2(x)
+        # TemporalConv2内部已包含ReLU和残差连接
         x = self.batch_norm(x)
         x = self.dropout(x)
         
+        # 移除块级残差连接，避免双重残差导致的信息过度混合
         return x
 
 class STGCN(nn.Module):
