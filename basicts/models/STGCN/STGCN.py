@@ -5,7 +5,7 @@ import numpy as np
 
 class ChebConv(nn.Module):
     # Chebyshev Graph Convolution with Residual Connection
-    def __init__(self, in_channels, out_channels, K, bias=True, residual=True):
+    def __init__(self, in_channels, out_channels, K, bias=True, residual=True, dropout=0.5):
         super(ChebConv, self).__init__()
         self.K = K # 保存多项式的阶数，供前向传播时使用
         self.in_channels = in_channels
@@ -13,6 +13,9 @@ class ChebConv(nn.Module):
         self.residual = residual
         self.weight = nn.Parameter(torch.Tensor(K, in_channels, out_channels))
         self._cached_lambda_max = None
+
+        self.batch_norm = nn.BatchNorm1d(out_channels)  # 使用BatchNorm1d，因为输入是3D(batch, channels, num_nodes)
+        self.dropout = nn.Dropout(dropout)
         if bias: # bias布尔值，是否添加可学习的偏置项
             self.bias = nn.Parameter(torch.Tensor(out_channels))
         else:
@@ -80,6 +83,8 @@ class ChebConv(nn.Module):
                 residual = x_input
             output = F.relu(output + residual)
         
+        output = self.batch_norm(output)     # BN
+        output = self.dropout(output)        # Dropout
         return output
 
     @staticmethod
@@ -92,7 +97,7 @@ class ChebConv(nn.Module):
 
 class TemporalConv(nn.Module):
     # Temporal Convolution with GLU and Residual Connection
-    def __init__(self, in_channels, out_channels, kernel_size=3, residual=True):
+    def __init__(self, in_channels, out_channels, kernel_size=3, residual=True, dropout=0.5):
         super(TemporalConv, self).__init__()
         self.residual = residual
         self.conv = nn.Conv2d(in_channels, out_channels * 2, kernel_size=(kernel_size, 1), 
@@ -101,7 +106,8 @@ class TemporalConv(nn.Module):
         # 只在时间维度上做卷积 在空间维度上不进行混合
         # 只在时间维度两端填充，保证输出的时间长度与输入相同；空间维度不填充
         self.gate = nn.GLU(dim=1) # 沿通道维度(dim=1)将数据分为两半
-        
+        self.batch_norm = nn.BatchNorm2d(out_channels)
+        self.dropout = nn.Dropout(dropout)
         # Residual alignment: 1x1 conv to match channels
         if self.residual and in_channels != out_channels:
             self.residual_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
@@ -112,32 +118,33 @@ class TemporalConv(nn.Module):
         x_input = x
         x = self.conv(x) #(N, in_channels, T, V) ->(N, out_channels * 2, T, V)
         x = self.gate(x) # output = A ⊙ σ(B) -> (N, out_channels, T, V)
-        
-        # Residual connection: output = ReLU(TemporalConv(x) + align(x))
+
+        # Residual connection: output = BN(GLU(conv(x)) + align(x)), then Dropout
         if self.residual:
             if self.residual_conv is not None:
                 residual = self.residual_conv(x_input)
             else:
                 residual = x_input
-            x = F.relu(x + residual)
-        
+            x = x + residual
+
+        x = self.batch_norm(x)
+        x = self.dropout(x)
         return x
     
 class STConvBlock(nn.Module):
     # Spatio-Temporal Convolution Block
     def __init__(self, in_channels, hidden_channels, out_channels, Kt, Ks, 
-                 dropout=0.0, graph_conv_type='cheb_conv', residual=True):
+                 dropout=0.5, graph_conv_type='cheb_conv', residual=True):
         super(STConvBlock, self).__init__()
         self.residual = residual
         # 内部卷积层各自使用残差连接，块级不再叠加残差
-        self.temporal_conv1 = TemporalConv(in_channels, hidden_channels, Kt, residual=residual)
+        self.temporal_conv1 = TemporalConv(in_channels, hidden_channels, Kt, residual=residual, dropout=dropout)
         if graph_conv_type == 'cheb_conv':
-            self.spatial_conv = ChebConv(hidden_channels, hidden_channels, Ks, residual=residual)
+            self.spatial_conv = ChebConv(hidden_channels, hidden_channels, Ks, residual=residual, dropout=dropout)
         else:
             raise ValueError(f"Unsupported graph_conv_type: {graph_conv_type}")
-        self.temporal_conv2 = TemporalConv(hidden_channels, out_channels, Kt, residual=residual)
-        self.batch_norm = nn.BatchNorm2d(out_channels)
-        self.dropout = nn.Dropout(dropout)
+        self.temporal_conv2 = TemporalConv(hidden_channels, out_channels, Kt, residual=residual, dropout=dropout)
+
     
     def forward(self, x, laplacian):
         x = self.temporal_conv1(x)
@@ -154,8 +161,6 @@ class STConvBlock(nn.Module):
 
         x = self.temporal_conv2(x)
         # TemporalConv2内部已包含ReLU和残差连接
-        x = self.batch_norm(x)
-        x = self.dropout(x)
         
         # 移除块级残差连接，避免双重残差导致的信息过度混合
         return x
@@ -163,7 +168,7 @@ class STConvBlock(nn.Module):
 class STGCN(nn.Module):
     # Spatio-Temporal Graph Convolutional Network
     def __init__(self, Kt=3, Ks=3, blocks=[[1, 32, 64], [64, 64, 128], [128, 128, 256]],
-                dropout=0.1, graph_conv_type='cheb_conv', num_nodes=307, num_features=3,
+                dropout=0.5, graph_conv_type='cheb_conv', num_nodes=307, num_features=3,
                 input_length=12, output_length=12):
         super(STGCN, self).__init__()
         self.Kt = Kt
