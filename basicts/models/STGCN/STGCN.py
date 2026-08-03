@@ -43,9 +43,9 @@ class ChebConv(nn.Module):
             # uniform_将偏置初始化为[-bound, bound]内的均匀分布
     
     def forward(self, x, laplacian):
-        # x: (batch, in_channels, num_nodes)
+        # x: (batch*time_steps, in_channels, num_nodes)
         # laplacian: (num_nodes, num_nodes)
-        # returns: (batch, out_channels. num_nodes)
+        # returns: (batch*time_steps, out_channels. num_nodes)
         batch_size, in_channels, num_nodes = x.size()
         # 先计算多项式矩阵
         x_input = x
@@ -167,7 +167,7 @@ class STConvBlock(nn.Module):
 
 class STGCN(nn.Module):
     # Spatio-Temporal Graph Convolutional Network
-    def __init__(self, Kt=3, Ks=3, blocks=[[1, 32, 64], [64, 64, 128], [128, 128, 256]],
+    def __init__(self, Kt=3, Ks=3, blocks=[[3, 32, 64], [64, 64, 128], [128, 128, 256]],
                 dropout=0.5, graph_conv_type='cheb_conv', num_nodes=307, num_features=3,
                 input_length=12, output_length=12):
         super(STGCN, self).__init__()
@@ -192,11 +192,14 @@ class STGCN(nn.Module):
                 STConvBlock(in_channels, hidden_channels, out_channels, Kt, Ks, dropout, graph_conv_type)
             )
 
-        # Output layer
+        # Output layer-全连接时间卷积层
+        # 使用kernel_size=(T', 1)的Conv2d显式压缩时间维度到1
+        # T'为经过STConv块后的时间维度长度，由于TemporalConv使用padding保持时间维度
+        # T'=input_length
+        # 输出通道数设为num_features * output_length以支持多步预测
         last_out_channels = blocks[-1][2]
-        # 输出层将通道数从last_out_channels变为num_features
-        # (B, last_out_channels, T, N) -> (B, num_features, T, N)
-        self.output_layer = nn.Conv2d(last_out_channels, num_features, kernel_size=(1,1))
+        self.output_layer = nn.Conv2d(last_out_channels, num_features * output_length,
+                                      kernel_size=(input_length, 1))
 
         # Learnable laplacian (will be replaced if provided)
         self.laplacian = nn.Parameter(torch.randn(num_nodes, num_nodes))
@@ -233,12 +236,18 @@ class STGCN(nn.Module):
             x = block(x, laplacian) # (batch, in_channels, input_length, num_nodes)
         # 依次将数据通过所有时空卷积块block(x, laplacian)调用的是STConvBlock的forward方法
 
-        # Output layer
-        x = self.output_layer(x) # (batch, last_out_channels, T, N) -> (batch, num_features, T, N)
+        # Output layer - 全连接时间卷积层
+        # (batch, last_out_channels, T', N) -> (batch, num_features * output_length, 1, N)
+        # 时间维度T'被压缩为1
+        x = self.output_layer(x)
+        
+        # Reshape: (batch, num_features * output_length, 1, N)
+        # -> (batch, num_features, output_length, N)
+        batch_size = x.size(0)
+        x = x.view(batch_size, self.num_features, self.output_length, self.num_nodes)
         
         # 调整维度顺序：(batch, num_features, output_length, num_nodes)
         # -> (batch, output_length, num_nodes, num_features)
         x = x.permute(0, 2, 3, 1).contiguous()
-        # permute后维度顺序变为：batch, time_steps, num_nodes, features
         
         return x
