@@ -1,0 +1,40 @@
+{
+  "model": "Historical Average",
+  "config": {
+    "history_weeks": 4,
+    "period_steps": 2016,
+    "input_length": 12,
+    "output_length": 12
+  },
+  "metrics": {
+    "MAE": 9.309133529663086,
+    "RMSE": 25.714448928833008,
+    "MAPE": 12.155935287475586
+  },
+  "stgcn": {
+    "MAE": 10.20848274230957,
+    "RMSE": 25.036224365234375,
+    "MAPE": 15.065102577209473
+  },
+  "data_info": {
+    "train_shape": [
+      11894,
+      307,
+      3
+    ],
+    "val_shape": [
+      2548,
+      307,
+      3
+    ],
+    "test_shape": [
+      2550,
+      307,
+      3
+    ],
+    "input_length": 12,
+    "output_length": 12,
+    "num_nodes": 307,
+    "num_features": 3
+  }
+}

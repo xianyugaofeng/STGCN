@@ -116,11 +116,9 @@ class BaseRunner:
 
             self.optimizer.zero_grad()
             # 每次迭代必须清空梯度，否则会累加
-            laplacian = None
-            if self.adj_matrix is not None:
-                laplacian = self._compute_laplacian(self.adj_matrix).to(self.device)
-                # 如果图邻接矩阵 adj_matrix 存在，就动态计算拉普拉斯并搬到设备上
-            pred = self.model(x, laplacian)
+            # 通过hook机制获取模型额外参数（如拉普拉斯矩阵），使框架通用化
+            model_kwargs = self._get_model_kwargs(x)
+            pred = self.model(x, **model_kwargs)
             loss = self.criterion(pred, y)
             
             loss.backward()
@@ -158,16 +156,14 @@ class BaseRunner:
         total_targets = []
         
         with torch.no_grad():
-            for x, y in val_loader:
-                x = x.to(self.device, dtype=torch.float32)
-                y = y.to(self.device, dtype=torch.float32)
-                
-                laplacian = None
-                if self.adj_matrix is not None:
-                    laplacian = self._compute_laplacian(self.adj_matrix).to(self.device)
-                
-                pred = self.model(x, laplacian)
-                loss = self.criterion(pred, y)
+                for x, y in val_loader:
+                    x = x.to(self.device, dtype=torch.float32)
+                    y = y.to(self.device, dtype=torch.float32)
+                    
+                    # 通过hook机制获取模型额外参数
+                    model_kwargs = self._get_model_kwargs(x)
+                    pred = self.model(x, **model_kwargs)
+                    loss = self.criterion(pred, y)
                 
                 total_loss += loss.item() * x.size(0)
                 total_preds.append(pred.detach().cpu())
@@ -186,23 +182,11 @@ class BaseRunner:
         
         return avg_loss, metrics
     
-    def _compute_laplacian(self, adj_matrix):
-        # 原始的邻接矩阵（图的拓扑结构）转换为一个对称归一化矩阵，送入后续的图卷积层使用
-        if isinstance(adj_matrix, np.ndarray):
-            adj_matrix = torch.from_numpy(adj_matrix).float()
-            # 如果是numpy数组就自动转成torch.float32
-        
-        d = adj_matrix.sum(dim=1)
-        # sum(dim=1)对每一行求和，得到一个长度为N的向量d，d[i]就是节点i的度
-        d_sqrt_inv = torch.sqrt(1.0 / (d + 1e-8))
-        # 加入一个极小的ε，防止某个节点的度恰好为0导致除零错误
-        # 度矩阵的-1/2次方的对角线值
-        d_sqrt_inv = torch.diag(d_sqrt_inv)
-        # torch.diag把一个向量变成[N, N]的方阵
-        # 只有主对角线有值，其余为0。它等价于矩阵 D^{-1/2}
-        laplacian = torch.matmul(torch.matmul(d_sqrt_inv, adj_matrix), d_sqrt_inv)
-        
-        return laplacian
+    def _get_model_kwargs(self, x):
+        # Hook方法：返回传递给模型forward的额外参数
+        # 默认返回空字典，子类可重写以提供模型特定的参数（如拉普拉斯矩阵）
+        # 这使BaseRunner保持通用性，不绑定任何特定模型的逻辑
+        return {}
     
     def _save_model(self, epoch):
         checkpoint_path = os.path.join(self.log_dir, f'model_epoch_{epoch}.pth')

@@ -1,171 +1,178 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import os
+import sys
+import numpy as np
+import torch
+import json
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from basicts.datasets.dataset_zoo import load_pems_data
+from basicts.metrics.metric_zoo import compute_metrics
 
 # 常见参数
 TIME_STEPS_PER_DAY = 288
-PERIOD_LENGTH = 7
 HISTORY_WEEKS = 4
+WEEKLY_PERIOD = TIME_STEPS_PER_DAY * 7  # 一周的步数 (5分钟间隔: 288 * 7 = 2016)
 
-# 数据划分比例
-TRAIN_RAITO = 0.6
-VAL_RATIO = 0.2
-TEST_RATIO = 0.2
-
-def import_dataset(dataset_name, data_dir="datasets"):
-    file_path = f'STGCN_data/{data_dir}/{dataset_name}.npz'
-    if not os.path.exists(file_path): # 若该文件不存在，直接返回一条提示字符串
-        print(f"{dataset_name}文件不存在: {file_path}")
-        return f"{dataset_name}文件不存在: {file_path}"
-
-    data_dict = np.load(file_path)
-    # PEMS数据通常存储在data key中
-    if 'data' in data_dict:
-        data = data_dict['data']
-    else:
-        key = list(data_dict.keys())[0]
-        data = data_dict[key]
-
-    if len(data.shape) == 3:
-        data = data[:, :, 0] # 取第一个特征流量
-    return data
-
-def calculate_metrics(y_true, y_pred):
-    # 计算MAE RMSE MAPE
-    # 避免除以零
-    epsilon = 1e-10
-    MAE = np.mean(np.abs(y_true - y_pred))
-    RMSE = np.sqrt(np.mean((y_true - y_pred) ** 2))
-
-    # MAPE忽略真实值为0的情况
-    mask = y_true > 50
-    if np.sum(mask) > 0:
-        MAPE = np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100
-    else:
-        MAPE = 0.0
-
-    return MAE, RMSE, MAPE
+def create_sliding_window_samples(data, input_length, output_length):
+    # 创建滑动窗口样本，与PEMSDataset相同的方式
+    num_samples = data.shape[0] - input_length - output_length + 1
+    x_list = []
+    y_list = []
+    for i in range(num_samples):
+        x = data[i:i+input_length]
+        y = data[i+input_length:i+input_length+output_length]
+        x_list.append(x)
+        y_list.append(y)
+    return np.array(x_list), np.array(y_list)
 
 class HistoricalAverageModel:
-    def __init__(self, history_weeks=4, period_steps=TIME_STEPS_PER_DAY * 7):
-        self.period_steps = period_steps # 一周的步数
+    # Historical Average Baseline Model for Traffic Forecasting
+    # 基于历史同期平均值进行预测，利用交通数据的周周期性
+
+    def __init__(self, history_weeks=4, period_steps=WEEKLY_PERIOD):
+        self.period_steps = period_steps  # 周期步数（一周）
         self.history_weeks = history_weeks
 
     def fit(self, train_data):
-        # HA模型不需要传统意义上的'fit' 需要存储训练数据以便查询历史
-        # 为了效率，我们可以在predict时动态计算或者预先计算好均值表
-        # 采用动态计算方式，更灵活且内存友好
+        # HA模型存储训练数据用于历史查询
         self.train_data = train_data
         self.train_size = train_data.shape[0]
-        print(f"模型初始化完成。使用过去{self.history_weeks}周的数据进行平均")
+        self.num_nodes = train_data.shape[1]
+        self.num_features = train_data.shape[2] if len(train_data.shape) > 2 else 1
+        print(f"[INFO] HA模型初始化完成，使用过去{self.history_weeks}周的数据进行历史平均")
 
-    def predict(self, test_start_index, total_test_steps, num_nodes):
-        # 对测试集进行预测
-        # test_start_index 测试集在原始数据的起始索引
-        # total_test_steps 测试集的总步数
-        # num_nodes 节点数
-        # 预测结果 [Total_Test_Steps, Num_Nodes]
+    def predict(self, test_data_start_index, num_samples, input_length, output_length):
+        # 对测试集进行多步预测
+        # test_data_start_index: 测试集在原始数据中的绝对起始索引
+        # returns: (num_samples, output_length, num_nodes, num_features)
+        predictions = np.zeros((num_samples, output_length, self.num_nodes, self.num_features))
+        print(f"[INFO] 正在进行Historical Average预测...")
 
+        # 预计算所有唯一目标时间的HA预测值（向量化优化）
+        target_start = test_data_start_index + input_length
+        target_end = test_data_start_index + num_samples + input_length + output_length - 1
+        all_target_times = np.arange(target_start, target_end)
+        ha_lookup = np.zeros((len(all_target_times), self.num_nodes, self.num_features))
 
-        predictions = np.zeros((total_test_steps, num_nodes))
-        print("正在进行Historical Average预测")
-
-        for t in range(total_test_steps):
-            # 当前绝对时间索引
-            current_abs_t = test_start_index + t
-
-            # 获取历史同期的索引列表
-            # 例如: t，t-1周，t-2周，t-3周
+        for i, t in enumerate(all_target_times):
             history_indices = []
             for w in range(1, self.history_weeks + 1):
-                hist_idx = current_abs_t - (w * self.period_steps)
-                if hist_idx < self.train_size and hist_idx >= 0:
+                hist_idx = t - w * self.period_steps
+                if 0 <= hist_idx < self.train_size:
                     history_indices.append(hist_idx)
-
             if len(history_indices) > 0:
-                # 提取历史数据并求平均
-                # train_data[history_indices] 形状: [Num_History, Num_Nodes]
-                historical_values = self.train_data[history_indices]
-                pred_value = np.mean(historical_values, axis=0)
+                ha_lookup[i] = np.mean(self.train_data[history_indices], axis=0)
             else:
-                # 如果没有任何历史数据可用(例如测试集刚开始且训练集不够长)
-                # 退化为使用全局训练集均值或上一时刻值
-                # 这里简单退化为训练集最后一个时刻的值，或者全0
-                pred_value = self.train_data[-1] if len(self.train_data) > 0 else np.zeros(num_nodes)
+                ha_lookup[i] = self.train_data[-1]
 
-            predictions[t] = pred_value
+        # 从查找表中提取每个样本的预测
+        for s in range(num_samples):
+            for j in range(output_length):
+                predictions[s, j] = ha_lookup[s + j]
 
+        print(f"[INFO] HA预测完成 预测样本数: {num_samples}")
         return predictions
 
-    def plot_results(self, y_true, y_pred, node_id=0, steps_to_plot=288*2):
-        # 绘制单个节点前两天的预测对比
-        plt.figure(figsize=(12, 6))
-        time_axis = np.arange(steps_to_plot)
+def evaluate_historical_average(config):
+    # 评估Historical Average baseline模型
+    print("=" * 70)
+    print("Historical Average Baseline Evaluation for Traffic Forecasting")
+    print("=" * 70)
 
-        plt.plot(time_axis, y_true[:steps_to_plot, node_id], label="True Value",
-                 color="blue", linewidth=1.5)
-        plt.plot(time_axis, y_pred[:steps_to_plot, node_id], label="HA Prediction",
-                 linestyle='--', color="red", linewidth=1.5)
+    data_file_path = config.get('DATA_FILE_PATH', 'STGCN_data/PEMS04/PEMS04.npz')
+    adj_file_path = config.get('ADJ_FILE_PATH', None)
+    input_length = config.get('INPUT_LENGTH', 12)
+    output_length = config.get('OUTPUT_LENGTH', 12)
+    history_weeks = config.get('HISTORY_WEEKS', HISTORY_WEEKS)
 
-        plt.title(f'Historical Average Prediction vs True Value (Node {node_id})')
-        plt.xlabel('Time Steps(5 min interval)')
-        plt.ylabel('Traffic Flow')
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        plt.show()
+    print(f"\n[INFO] Loading data from {data_file_path}")
+    train_data, val_data, test_data, adj_matrix, normalizer = load_pems_data(
+        data_file_path, adj_file_path,
+        max_train_samples=config.get('MAX_TRAIN_SAMPLES'),
+        max_val_samples=config.get('MAX_VAL_SAMPLES'),
+        max_test_samples=config.get('MAX_TEST_SAMPLES'),
+        normalize=True
+    )
+    print(f"[INFO] Data shapes: train={train_data.shape}, val={val_data.shape}, test={test_data.shape}")
 
-# 主执行流程
+    print(f"[INFO] Creating sliding window samples...")
+    test_x, test_y = create_sliding_window_samples(test_data, input_length, output_length)
+    print(f"[INFO] Test samples: x={test_x.shape}, y={test_y.shape}")
+
+    model = HistoricalAverageModel(history_weeks=history_weeks)
+    model.fit(train_data)
+
+    # 测试集在原始数据中的绝对起始索引
+    test_data_start_index = len(train_data) + len(val_data)
+    num_samples = test_x.shape[0]
+    predictions = model.predict(test_data_start_index, num_samples, input_length, output_length)
+
+    # 反归一化到原始尺度
+    if normalizer is not None:
+        predictions = normalizer.inverse_transform(predictions)
+        test_y = normalizer.inverse_transform(test_y)
+        print(f"[INFO] Data inverse transformed to original scale")
+
+    pred_tensor = torch.from_numpy(predictions).float()
+    target_tensor = torch.from_numpy(test_y).float()
+    # 随后将NumPy数组转换为PyTorch张量，方便利用PyTorch的算子计算损失或指标
+    metric_names = config.get('METRICS', ['MAE', 'RMSE', 'MAPE'])
+    metrics = compute_metrics(pred_tensor, target_tensor, metric_names)
+
+    print("\n" + "-" * 70)
+    print(f"{'Model':<30} {'MAE':>12} {'RMSE':>12} {'MAPE':>12}")
+    print("-" * 70)
+    print(f"{'Historical Average':<30} {metrics['MAE']:>12.4f} {metrics['RMSE']:>12.4f} {metrics['MAPE']:>10.2f}%")
+    print("-" * 70)
+
+    # 对比STGCN模型结果
+    stgcn_results = None
+    stgcn_metrics_path = config.get('STGCN_METRICS_PATH', 'outputs/smoke_STGCN_PEMS04/best_val_metrics.json')
+    if os.path.exists(stgcn_metrics_path):
+        print(f"\n[INFO] STGCN Model Best Validation Metrics (from {stgcn_metrics_path}):")
+        with open(stgcn_metrics_path, 'r', encoding='utf-8') as f:
+            best_val_metrics = json.load(f)
+        stgcn_results = {
+            'MAE': best_val_metrics['MAE'],
+            'RMSE': best_val_metrics['RMSE'],
+            'MAPE': best_val_metrics['MAPE']
+        }
+        print(f"{'STGCN':<30} {stgcn_results['MAE']:>12.4f} {stgcn_results['RMSE']:>12.4f} {stgcn_results['MAPE']:>10.2f}%")
+    else:
+        print(f"\n[WARN] STGCN metrics file not found: {stgcn_metrics_path}")
+
+    # 保存结果
+    output_dir = config.get('LOG_DIR', 'outputs/STGCN_PEMS04')
+    os.makedirs(output_dir, exist_ok=True)
+    baseline_results = {
+        'model': 'Historical Average',
+        'config': {'history_weeks': history_weeks, 'period_steps': WEEKLY_PERIOD,
+                   'input_length': input_length, 'output_length': output_length},
+        'metrics': metrics,
+        'stgcn': stgcn_results,
+        'data_info': {
+            'train_shape': list(train_data.shape), 'val_shape': list(val_data.shape),
+            'test_shape': list(test_data.shape), 'input_length': input_length,
+            'output_length': output_length, 'num_nodes': train_data.shape[1],
+            'num_features': train_data.shape[2] if len(train_data.shape) > 2 else 1
+        }
+    }
+    output_path = os.path.join(output_dir, 'ha_baseline_results.json')
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(baseline_results, f, indent=2, ensure_ascii=False)
+    print(f"\n[INFO] Results saved to {output_path}")
+    return metrics
+
 if __name__ == '__main__':
-    # 加载数据
-    for name in ["PEMS03", "PEMS04", "PEMS07", "PEMS08"]:
-        raw_data = import_dataset(name, name)
-        NUM_NODES = raw_data.shape[1]
-
-        print(f"数据形状：{NUM_NODES}")
-        print(f"数据范围：[{raw_data.min():.2f}, {raw_data.max():.2f}]")
-
-        # 数据划分
-        total_steps = raw_data.shape[0]
-        train_size = int(total_steps * TRAIN_RAITO)
-        val_size = int(total_steps * VAL_RATIO)
-        # test_size剩余部分
-
-        train_data = raw_data[:train_size]
-        val_data = raw_data[train_size:train_size + val_size]
-        test_data = raw_data[train_size + val_size:]
-
-        test_start_index = train_size + val_size
-
-        print(f"训练集大小: {train_data.shape[0]}步")
-        print(f"验证集大小: {val_data.shape[0]}步")
-        print(f"测试集大小: {test_data.shape[0]}步")
-
-        # 初始化并运行HA模型
-        # HA通常只在训练集上查找历史，或者在整个可用历史中查找
-        # 严格基线通常只使用训练集数据来计算历史平均值，以防止数据泄露
-        model = HistoricalAverageModel(history_weeks=HISTORY_WEEKS)
-        model.fit(train_data)
-
-        # 预测测试集
-        predictions = model.predict(test_start_index, test_data.shape[0], NUM_NODES)
-
-        # 评估结果
-        mae, rmse, mape = calculate_metrics(test_data, predictions)
-        print("\n" + "="*30)
-        print("Historical Average Baseline Results")
-        print("="*30)
-        print(f"MAE:  {mae:.4f}")
-        print(f"RMSE: {rmse:.4f}")
-        print(f"MAPE: {mape:.2f}%")
-        print("="*30)
-
-        # 可视化
-        # 选择一个流量变化比较明显的节点进行展示
-        # 计算每个节点在测试集上的方差，选方差最大的节点
-        # 从所有预测节点中，自动选取预测值波动最剧烈的节点，并可视化其预测结果
-        node_variances = np.var(predictions, axis=0) # 对每个节点，求它在所有时间步上预测值的方差
-        target_node = np.argmax(node_variances)
-
-        print(f"正在绘制节点 {target_node} 的预测结果...")
-        model.plot_results(test_data, predictions, node_id=target_node)
+    config = {
+        'DATA_FILE_PATH': 'STGCN_data/PEMS04/PEMS04.npz',
+        'ADJ_FILE_PATH': 'STGCN_data/PEMS04/adj_PEMS04.pkl',
+        'INPUT_LENGTH': 12, 'OUTPUT_LENGTH': 12,
+        'METRICS': ['MAE', 'RMSE', 'MAPE'],
+        'LOG_DIR': 'outputs/STGCN_PEMS04',
+        'STGCN_METRICS_PATH': 'outputs/smoke_STGCN_PEMS04/best_val_metrics.json',
+        'HISTORY_WEEKS': 4,
+        'MAX_TRAIN_SAMPLES': None, 'MAX_VAL_SAMPLES': None, 'MAX_TEST_SAMPLES': None
+    }
+    evaluate_historical_average(config)

@@ -14,7 +14,7 @@
 
     "MODEL_NAME": "STGCN",
     "MODEL": "basicts.models.STGCN",
-    "RUNNER": "BaseRunner",
+    "RUNNER": "STGCNRunner",
     "MODEL_ARGS": {
         "Kt": 3,
         "Ks": 3,
