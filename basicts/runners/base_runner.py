@@ -156,18 +156,18 @@ class BaseRunner:
         total_targets = []
         
         with torch.no_grad():
-                for x, y in val_loader:
-                    x = x.to(self.device, dtype=torch.float32)
-                    y = y.to(self.device, dtype=torch.float32)
-                    
-                    # 通过hook机制获取模型额外参数
-                    model_kwargs = self._get_model_kwargs(x)
-                    pred = self.model(x, **model_kwargs)
-                    loss = self.criterion(pred, y)
+            for x, y in val_loader:
+                x = x.to(self.device, dtype=torch.float32)
+                y = y.to(self.device, dtype=torch.float32)
                 
-                total_loss += loss.item() * x.size(0)
-                total_preds.append(pred.detach().cpu())
-                total_targets.append(y.detach().cpu())
+                # 通过hook机制获取模型额外参数
+                model_kwargs = self._get_model_kwargs(x)
+                pred = self.model(x, **model_kwargs)
+                loss = self.criterion(pred, y)
+            
+            total_loss += loss.item() * x.size(0)
+            total_preds.append(pred.detach().cpu())
+            total_targets.append(y.detach().cpu())
         
         avg_loss = total_loss / len(val_loader.dataset)
         total_preds = torch.cat(total_preds, dim=0)

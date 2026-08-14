@@ -80,7 +80,7 @@ def evaluate_historical_average(config):
     print("Historical Average Baseline Evaluation for Traffic Forecasting")
     print("=" * 70)
 
-    data_file_path = config.get('DATA_FILE_PATH', 'STGCN_data/PEMS04/PEMS04.npz')
+    data_file_path = config.get('DATA_FILE_PATH', 'PEMSdata/PEMS04/PEMS04.npz')
     adj_file_path = config.get('ADJ_FILE_PATH', None)
     input_length = config.get('INPUT_LENGTH', 12)
     output_length = config.get('OUTPUT_LENGTH', 12)
@@ -166,8 +166,8 @@ def evaluate_historical_average(config):
 
 if __name__ == '__main__':
     config = {
-        'DATA_FILE_PATH': 'STGCN_data/PEMS04/PEMS04.npz',
-        'ADJ_FILE_PATH': 'STGCN_data/PEMS04/adj_PEMS04.pkl',
+        'DATA_FILE_PATH': 'PEMSdata/PEMS04/PEMS04.npz',
+        'ADJ_FILE_PATH': 'PEMSdata/PEMS04/adj_PEMS04.pkl',
         'INPUT_LENGTH': 12, 'OUTPUT_LENGTH': 12,
         'METRICS': ['MAE', 'RMSE', 'MAPE'],
         'LOG_DIR': 'outputs/STGCN_PEMS04',

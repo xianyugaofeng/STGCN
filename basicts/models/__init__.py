@@ -1,4 +1,5 @@
 from .STGCN import STGCN
+from .STID import STID
 
 MODEL_ZOO = {
     'STGCN': STGCN,

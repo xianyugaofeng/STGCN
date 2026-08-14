@@ -55,7 +55,7 @@ class Normalizer:
 
 def load_pems_data(data_file_path, adj_file_path=None, max_train_samples=None, 
                    max_val_samples=None, max_test_samples=None, smoke_test_mode=False,
-                   normalize=True):
+                   normalize=True, train_ratio=0.6, val_ratio=0.2):
     # Load PEMS dataset
     print(f"[INFO] Loading data from {data_file_path}")
     
@@ -79,8 +79,8 @@ def load_pems_data(data_file_path, adj_file_path=None, max_train_samples=None,
     
     # Train/Val/Test split (70%/15%/15%)
     num_timesteps = data.shape[0] # 总时间步数
-    train_end = int(num_timesteps * 0.7) # 前70%作为训练集
-    val_end = train_end + int(num_timesteps * 0.15) # 接着15%作为验证集
+    train_end = int(num_timesteps * train_ratio) # 前60%作为训练集
+    val_end = train_end + int(num_timesteps * val_ratio) # 接着20%作为验证集, 20%为测试集
 
     train_data = data[:train_end]
     val_data = data[train_end:val_end]
@@ -185,13 +185,17 @@ def build_dataloader(config, mode='train'):
     num_workers = config.get('NUM_WORKERS', 2)
     smoke_test_mode = config.get('SMOKE_TEST_MODE', False)
     normalize = config.get('NORMALIZE', True)
-    
+    train_ratio = config.get('TRAIN_RATIO', 0.6)
+    val_ratio = config.get('VAL_RATIO', 0.2)
+
     if mode == 'train':
         train_data, val_data, test_data, adj_matrix, normalizer = load_pems_data(
             data_file_path, adj_file_path,
             max_train_samples=config.get('MAX_TRAIN_SAMPLES'),
             smoke_test_mode=smoke_test_mode,
-            normalize=normalize
+            normalize=normalize,
+            train_ratio=train_ratio,
+            val_ratio=val_ratio
         )
         dataset = PEMSDataset(train_data, input_length, output_length, mode='train')
     elif mode == 'val':
@@ -200,7 +204,9 @@ def build_dataloader(config, mode='train'):
             data_file_path, adj_file_path,
             max_val_samples=config.get('MAX_VAL_SAMPLES'),
             smoke_test_mode=smoke_test_mode,
-            normalize=normalize
+            normalize=normalize,
+            train_ratio=train_ratio,
+            val_ratio=val_ratio
         )
         dataset = PEMSDataset(val_data, input_length, output_length, mode='val')
     elif mode == 'test':
@@ -208,7 +214,9 @@ def build_dataloader(config, mode='train'):
             data_file_path, adj_file_path,
             max_test_samples=config.get('MAX_TEST_SAMPLES'),
             smoke_test_mode=smoke_test_mode,
-            normalize=normalize
+            normalize=normalize,
+            train_ratio=train_ratio,
+            val_ratio=val_ratio
         )
         dataset = PEMSDataset(test_data, input_length, output_length, mode='test')
     else:

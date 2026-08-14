@@ -4,8 +4,8 @@
     "NUM_WORKERS": 2,
 
     "DATASET_NAME": "PEMS04",
-    "DATA_FILE_PATH": "STGCN_data/PEMS04/PEMS04.npz",
-    "ADJ_FILE_PATH": "STGCN_data/PEMS04/adj_PEMS04.pkl",
+    "DATA_FILE_PATH": "PEMSdata/PEMS04/PEMS04.npz",
+    "ADJ_FILE_PATH": "PEMSdata/PEMS04/adj_PEMS04.pkl",
 
     "INPUT_LENGTH": 12,
     "OUTPUT_LENGTH": 12,

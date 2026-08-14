@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from .base_runner import BaseRunner
 
 class STGCNRunner(BaseRunner):
     # STGCN专用的Runner

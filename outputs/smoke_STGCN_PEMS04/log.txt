@@ -448,3 +448,86 @@
 2026-08-04 02:05:11,041 - INFO - Best validation metrics: {'MAE': 10.20848274230957, 'RMSE': 25.036224365234375, 'MAPE': 15.065102577209473}
 2026-08-04 02:05:11,042 - INFO - Training finished at 2026-08-04 02:05:11.042234
 2026-08-04 02:05:11,042 - INFO - ============================================================
+2026-08-14 21:09:07,592 - INFO - Using GPU: cuda:0
+2026-08-14 21:12:43,015 - INFO - Using GPU: cuda:0
+2026-08-14 21:13:52,245 - INFO - Using GPU: cuda:0
+2026-08-14 21:13:53,099 - INFO - Model: STGCN
+2026-08-14 21:13:53,099 - INFO - Model args: {'Kt': 3, 'Ks': 3, 'blocks': [[3, 8, 8], [8, 8, 16]], 'dropout': 0.0, 'graph_conv_type': 'cheb_conv', 'num_nodes': 307, 'num_features': 3, 'input_length': 12, 'output_length': 12}
+2026-08-14 21:13:53,099 - INFO - Total parameters: 103,645
+2026-08-14 21:13:54,221 - INFO - ============================================================
+2026-08-14 21:13:54,226 - INFO - Training started at 2026-08-14 21:13:54.226020
+2026-08-14 21:13:54,226 - INFO - Config: {
+  "SEED": 42,
+  "DEVICE": "cuda:0",
+  "NUM_WORKERS": 0,
+  "DATASET_NAME": "PEMS04",
+  "DATA_FILE_PATH": "PEMSdata/PEMS04/PEMS04.npz",
+  "ADJ_FILE_PATH": "PEMSdata/PEMS04/adj_PEMS04.pkl",
+  "INPUT_LENGTH": 12,
+  "OUTPUT_LENGTH": 12,
+  "NUM_NODES": 307,
+  "NUM_FEATURES": 3,
+  "MODEL_NAME": "STGCN",
+  "MODEL": "basicts.models.STGCN",
+  "RUNNER": "STGCNRunner",
+  "MODEL_ARGS": {
+    "Kt": 3,
+    "Ks": 3,
+    "blocks": [
+      [
+        3,
+        8,
+        8
+      ],
+      [
+        8,
+        8,
+        16
+      ]
+    ],
+    "dropout": 0.0,
+    "graph_conv_type": "cheb_conv",
+    "num_nodes": 307,
+    "num_features": 3,
+    "input_length": 12,
+    "output_length": 12
+  },
+  "TRAIN_NUM_EPOCHS": 1,
+  "TRAIN_BATCH_SIZE": 8,
+  "TRAIN_LEARNING_RATE": 0.001,
+  "TRAIN_WEIGHT_DECAY": 0.0001,
+  "TRAIN_EARLY_STOPPING_PATIENCE": -1,
+  "TRAIN_RATIO": 0.6,
+  "VAL_RATIO": 0.2,
+  "TEST_RATIO": 0.2,
+  "VAL_BATCH_SIZE": 8,
+  "TEST_BATCH_SIZE": 8,
+  "LOSS_FUNCTION": "masked_mae",
+  "METRICS": [
+    "MAE",
+    "RMSE",
+    "MAPE"
+  ],
+  "LOG_DIR": "outputs/smoke_STGCN_PEMS04",
+  "SAVE_MODEL": true,
+  "PRINT_FREQ": 10,
+  "MAX_TRAIN_SAMPLES": null,
+  "MAX_VAL_SAMPLES": null,
+  "MAX_TEST_SAMPLES": null,
+  "NORMALIZE": true
+}
+2026-08-14 21:13:54,226 - INFO - ============================================================
+2026-08-14 21:13:54,226 - INFO - 
+--- Epoch 1/1 ---
+2026-08-14 21:13:54,292 - INFO - Laplacian matrix computed and cached: torch.Size([307, 307])
+2026-08-14 21:14:26,266 - INFO - Epoch 1 - Train Loss: 0.242450, MAE: 12.3716, RMSE: 30.0367, MAPE: 18.9766
+2026-08-14 21:14:31,847 - INFO - Epoch 1 - Val Loss: 0.000176, MAE: 3.8990, RMSE: 8.8275, MAPE: 16.2598
+2026-08-14 21:14:31,878 - INFO - Model saved to outputs/smoke_STGCN_PEMS04\model_epoch_1.pth
+2026-08-14 21:14:31,879 - INFO - ------------------------------------------------------------
+2026-08-14 21:14:31,879 - INFO - 
+============================================================
+2026-08-14 21:14:31,879 - INFO - Training completed
+2026-08-14 21:14:31,879 - INFO - Best validation loss: 0.000176
+2026-08-14 21:14:31,879 - INFO - Best validation metrics: {'MAE': 3.898970603942871, 'RMSE': 8.827502250671387, 'MAPE': 16.259796142578125}
+2026-08-14 21:14:31,880 - INFO - Training finished at 2026-08-14 21:14:31.880652
+2026-08-14 21:14:31,880 - INFO - ============================================================
