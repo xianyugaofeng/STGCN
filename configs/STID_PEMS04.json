@@ -1,0 +1,48 @@
+{
+    "SEED": 42,
+    "DEVICE": "cuda:0",
+    "NUM_WORKERS": 2,
+
+    "DATASET_NAME": "PEMS04",
+    "DATA_FILE_PATH": "STGCN_data/PEMS04/PEMS04.npz",
+    "ADJ_FILE_PATH": "STGCN_data/PEMS04/adj_PEMS04.pkl",
+
+    "INPUT_LENGTH": 12,
+    "OUTPUT_LENGTH": 12,
+    "NUM_NODES": 307,
+    "NUM_FEATURES": 3,
+
+    "MODEL_NAME": "STID",
+    "MODEL": "basicts.models.STID",
+    "RUNNER": "STIDRunner",
+    "MODEL_ARGS": {
+        "embed_dim": 32,    
+        "num_layer": 3, 
+        "if_node": true,
+        "node_dim": 32,
+        "if_T_i_D": true,
+        "if_D_i_W": true,
+        "temp_dim_tid": 32,
+        "temp_dim_diw": 32
+    },
+    "TRAIN_NUM_EPOCHS": 100,
+    "TRAIN_BATCH_SIZE": 64,
+    "TRAIN_LEARNING_RATE": 0.002,
+    "TRAIN_WEIGHT_DECAY": 0.0001,
+    "TRAIN_EARLY_STOPPING_PATIENCE": -1,
+
+    "VAL_BATCH_SIZE": 64,
+    "TEST_BATCH_SIZE": 64,
+
+    "LOSS_FUNCTION": "masked_mae",
+    "METRICS": ["MAE", "RMSE", "MAPE"],
+
+    "LOG_DIR": "outputs/STID_PEMS04",
+    "SAVE_MODEL": true,
+    "PRINT_FREQ": 10,
+
+    "MAX_TRAIN_SAMPLES": null,
+    "MAX_VAL_SAMPLES": null,
+    "MAX_TEST_SAMPLES": null,
+    "NORMALIZE": true
+}
