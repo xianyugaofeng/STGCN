@@ -174,60 +174,121 @@ def create_adjacency_from_csv(csv_path, num_nodes=None, symmetric=True,
     np.fill_diagonal(adj_matrix, default_diag)
     return adj_matrix
 
-def build_dataloader(config, mode='train'):
-   # Build DataLoader based on config
-    data_file_path = config.get('DATA_FILE_PATH', 'STGCN_data/PEMS04/PEMS04.npz')
-    adj_file_path = config.get('ADJ_FILE_PATH', None)
-    
-    input_length = config.get('INPUT_LENGTH', 12)
-    output_length = config.get('OUTPUT_LENGTH', 12)
-    batch_size = config.get(f'{mode.upper()}_BATCH_SIZE', 32)
-    num_workers = config.get('NUM_WORKERS', 2)
-    smoke_test_mode = config.get('SMOKE_TEST_MODE', False)
-    normalize = config.get('NORMALIZE', True)
-    train_ratio = config.get('TRAIN_RATIO', 0.6)
-    val_ratio = config.get('VAL_RATIO', 0.2)
+class BaseDataProcessor:
+    # 数据处理基类 封装加载/切分/归一化/构建DataLoader的通用流程
+    # 不同模型通过子类化并重写build_dataset等hook实现差异化数据处理 实现解耦
+    def __init__(self, config):
+        self.config = config
+        self.data_file_path = config.get('DATA_FILE_PATH', 'STGCN_data/PEMS04/PEMS04.npz')
+        self.adj_file_path = config.get('ADJ_FILE_PATH', None)
+        self.input_length = config.get('INPUT_LENGTH', 12)
+        self.output_length = config.get('OUTPUT_LENGTH', 12)
+        self.smoke_test_mode = config.get('SMOKE_TEST_MODE', False)
+        self.normalize = config.get('NORMALIZE', True)
+        self.train_ratio = config.get('TRAIN_RATIO', 0.6)
+        self.val_ratio = config.get('VAL_RATIO', 0.2)
+        self.steps_per_day = config.get('STEPS_PER_DAY', 288)  # PEMS默认5分钟采样 一天288步
 
-    if mode == 'train':
-        train_data, val_data, test_data, adj_matrix, normalizer = load_pems_data(
-            data_file_path, adj_file_path,
-            max_train_samples=config.get('MAX_TRAIN_SAMPLES'),
-            smoke_test_mode=smoke_test_mode,
-            normalize=normalize,
-            train_ratio=train_ratio,
-            val_ratio=val_ratio
+    def load_raw(self, mode):
+        # 复用load_pems_data加载并切分原始数据 返回三段数据+邻接矩阵+归一化器
+        max_samples_key = {
+            'train': 'MAX_TRAIN_SAMPLES',
+            'val': 'MAX_VAL_SAMPLES',
+            'test': 'MAX_TEST_SAMPLES'
+        }[mode]
+        return load_pems_data(
+            self.data_file_path, self.adj_file_path,
+            max_train_samples=self.config.get('MAX_TRAIN_SAMPLES') if mode == 'train' else None,
+            max_val_samples=self.config.get('MAX_VAL_SAMPLES') if mode == 'val' else None,
+            max_test_samples=self.config.get('MAX_TEST_SAMPLES') if mode == 'test' else None,
+            smoke_test_mode=self.smoke_test_mode,
+            normalize=self.normalize,
+            train_ratio=self.train_ratio,
+            val_ratio=self.val_ratio
         )
-        dataset = PEMSDataset(train_data, input_length, output_length, mode='train')
-    elif mode == 'val':
-        # Reload to get validation data
-        train_data, val_data, test_data, adj_matrix, normalizer = load_pems_data(
-            data_file_path, adj_file_path,
-            max_val_samples=config.get('MAX_VAL_SAMPLES'),
-            smoke_test_mode=smoke_test_mode,
-            normalize=normalize,
-            train_ratio=train_ratio,
-            val_ratio=val_ratio
+
+    def build_dataset(self, data, mode):
+        # hook方法 子类重写以返回模型专属Dataset
+        return PEMSDataset(data, self.input_length, self.output_length, mode=mode)
+
+    def build_dataloader(self, mode):
+        # 通用流程:加载原始数据->选取对应分段->构建Dataset->构建DataLoader
+        train_data, val_data, test_data, adj_matrix, normalizer = self.load_raw(mode)
+        data_map = {'train': train_data, 'val': val_data, 'test': test_data}
+        if mode not in data_map:
+            raise ValueError(f"Unknown mode: {mode}")
+        dataset = self.build_dataset(data_map[mode], mode)
+        batch_size = self.config.get(f'{mode.upper()}_BATCH_SIZE', 32)
+        num_workers = self.config.get('NUM_WORKERS', 2)
+        dataloader = DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=(mode == 'train'),  # 只在训练时打乱数据顺序
+            num_workers=num_workers,    # 提升数据到GPU的传输效率
+            pin_memory=True            # 多进程加载数据
         )
-        dataset = PEMSDataset(val_data, input_length, output_length, mode='val')
-    elif mode == 'test':
-        train_data, val_data, test_data, adj_matrix, normalizer = load_pems_data(
-            data_file_path, adj_file_path,
-            max_test_samples=config.get('MAX_TEST_SAMPLES'),
-            smoke_test_mode=smoke_test_mode,
-            normalize=normalize,
-            train_ratio=train_ratio,
-            val_ratio=val_ratio
-        )
-        dataset = PEMSDataset(test_data, input_length, output_length, mode='test')
-    else:
-        raise ValueError(f"Unknown mode: {mode}")
-    
-    dataloader = DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=(mode == 'train'), # 只在训练时打乱数据顺序
-        num_workers=num_workers, # 提升数据到GPU的传输效率
-        pin_memory=True # 多进程加载数据
-    )
-    
-    return dataloader, adj_matrix, normalizer
+        return dataloader, adj_matrix, normalizer
+
+
+class STGCNProcessor(BaseDataProcessor):
+    # STGCN数据处理:标准(x, y)格式 无额外时间特征
+    pass
+
+
+class STIDDataset(Dataset):
+    # STID专用数据集:在(x, y)基础上附加时间特征(time_of_day, day_of_week)
+    # 返回(x, y, tod, dow) 其中tod/dow为输入窗口每个时间步的整数索引 供nn.Embedding使用
+    def __init__(self, data, input_length=12, output_length=12, mode='train', steps_per_day=288):
+        self.data = data
+        self.input_length = input_length
+        self.output_length = output_length
+        self.mode = mode
+        self.steps_per_day = steps_per_day
+        self.num_samples = data.shape[0] - input_length - output_length + 1
+        self.indices = [(i, i + input_length, i + input_length + output_length)
+                        for i in range(self.num_samples)]
+
+    def __len__(self):
+        return self.num_samples
+
+    def __getitem__(self, idx):
+        start, mid, end = self.indices[idx]
+        x = self.data[start:mid]
+        y = self.data[mid:end]
+        # 由输入窗口的全局时间步索引推导time_of_day与day_of_week
+        ts = np.arange(start, mid)
+        tod = (ts % self.steps_per_day).astype(np.int64)        # 0..steps_per_day-1
+        dow = (ts // self.steps_per_day % 7).astype(np.int64)   # 0..6
+        return x, y, tod, dow
+
+
+class STIDProcessor(BaseDataProcessor):
+    # STID数据处理:附加时间特征(ToD/DoW) 配合STID模型的embedding输入
+    def build_dataset(self, data, mode):
+        return STIDDataset(data, self.input_length, self.output_length,
+                           mode=mode, steps_per_day=self.steps_per_day)
+
+
+# 数据处理器注册表:新增模型只需在此注册对应Processor 无需改动build_dataloader
+PROCESSOR_ZOO = {
+    'Base': BaseDataProcessor,
+    'STGCN': STGCNProcessor,
+    'STID': STIDProcessor,
+}
+
+
+def get_processor(name):
+    # 按名称获取数据处理器类 未注册时给出可用列表
+    if name not in PROCESSOR_ZOO:
+        raise ValueError(f"Data processor {name} not found in PROCESSOR_ZOO. "
+                          f"Available: {list(PROCESSOR_ZOO.keys())}")
+    return PROCESSOR_ZOO[name]
+
+
+def build_dataloader(config, mode='train'):
+    # 通过PROCESSOR_ZOO解耦:用MODEL_NAME指定处理器
+    processor_name = config.get(config.get('MODEL_NAME', 'Base'))
+    processor_cls = get_processor(processor_name)
+    processor = processor_cls(config)
+    print(f"[INFO] Using data processor: {processor_name} for mode={mode}")
+    return processor.build_dataloader(mode)
