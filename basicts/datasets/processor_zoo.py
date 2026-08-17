@@ -129,8 +129,10 @@ class STGCNProcessor(BaseDataProcessor):
 class STIDProcessor(BaseDataProcessor):
     # STID数据处理:附加时间特征(ToD/DoW) 配合STID模型的embedding输入
     def build_dataset(self, data, mode):
+        add_time_of_day = self.config.get('ADD_TIME_OF_DAY', True)
+        add_day_of_week = self.config.get('ADD_DAY_OF_WEEK', True)
         return get_dataset('STID')(data, self.input_length, self.output_length,
-                           mode=mode, steps_per_day=self.steps_per_day)
+                           mode=mode, steps_per_day=self.steps_per_day, add_time_of_day=add_time_of_day, add_day_of_week=add_day_of_week)
 
     def create_adjacency_from_csv(self, csv_path, num_nodes=None, **kwargs):
         # STID为MLP模型 无需图结构 覆写hook不生成邻接矩阵

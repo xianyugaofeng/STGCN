@@ -85,14 +85,14 @@ def load_pems_data(data_file_path, adj_file_path=None, max_train_samples=None,
 
 class STIDDataset(Dataset):
     # STID专用数据集:在(x, y)基础上附加时间特征(time_of_day, day_of_week)
-    # 返回(x, y, tod, dow)其中tod/dow为输入窗口每个时间步的整数索引 供nn.Embedding使用
-    def __init__(self, data, input_length=12, output_length=12, mode='train', steps_per_day=288):
-        self.data = data
+    def __init__(self, data, input_length=12, output_length=12,
+                 mode='train', steps_per_day=288, add_time_of_day=True, add_day_of_week=True):
         self.input_length = input_length
         self.output_length = output_length
         self.mode = mode
         self.steps_per_day = steps_per_day
-        self.num_samples = data.shape[0] - input_length - output_length + 1
+        self.data = self.add_temporal_features(data, add_time_of_day, add_day_of_week, steps_per_day)
+        self.num_samples = self.data.shape[0] - input_length - output_length + 1
         self.indices = [(i, i + input_length, i + input_length + output_length)
                         for i in range(self.num_samples)]
 
@@ -103,11 +103,24 @@ class STIDDataset(Dataset):
         start, mid, end = self.indices[idx]
         x = self.data[start:mid]
         y = self.data[mid:end]
-        # 由输入窗口的全局时间步索引推导time_of_day与day_of_week
-        ts = np.arange(start, mid)
-        tod = (ts % self.steps_per_day).astype(np.int64)        # 0..steps_per_day-1
-        dow = (ts // self.steps_per_day % 7).astype(np.int64)   # 0..6
-        return x, y, tod, dow
+        return x, y
+    
+    @staticmethod
+    def add_temporal_features(data, add_time_of_day, add_day_of_week, steps_per_day=288):
+        T, N, C = data.shape
+        feature_list = [data]
+        if add_time_of_day:
+            time_of_day = np.array([(i % steps_per_day / steps_per_day) for i in range(T)])
+            time_of_day_tiled = np.tile(time_of_day, [1, N, 1]).transpose(2, 1, 0)
+            feature_list.append(time_of_day_tiled)
+        
+        if add_day_of_week:
+            day_of_week = np.array([(i // steps_per_day) % 7 / 7 for i in range(T)])
+            day_of_week_tiled = np.tile(day_of_week, [1, N, 1]).transpose(2, 1, 0)
+            feature_list.append(day_of_week_tiled)
+        
+        data_with_features = np.concatenate(feature_list, axis=-1)
+        return data_with_features
 
 DATASET_ZOO = {
     'PEMS': PEMSDataset,

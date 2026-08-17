@@ -48,5 +48,8 @@
     "MAX_TRAIN_SAMPLES": null,
     "MAX_VAL_SAMPLES": null,
     "MAX_TEST_SAMPLES": null,
-    "NORMALIZE": true
+    "NORMALIZE": true,
+
+    "ADD_TIME_OF_DAY": true,
+    "ADD_DAY_OF_WEEK": true
 }
