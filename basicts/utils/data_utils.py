@@ -1,27 +1,29 @@
 import numpy as np
 import torch
 
-def normalize_data(data, method='minmax'):
-    if method == 'minmax':
-        min_val = data.min(axis=0)
-        max_val = data.max(axis=0)
-        normalized = (data - min_val) / (max_val - min_val + 1e-8)
-        return normalized, min_val, max_val
-    elif method == 'zscore':
-        mean_val = data.mean(axis=0)
-        std_val = data.std(axis=0)
-        normalized = (data - mean_val) / (std_val + 1e-8)
-        return normalized, mean_val, std_val
-    else:
-        raise ValueError(f"Unknown normalization method: {method}")
-
-def denormalize_data(data, min_val=None, max_val=None, mean_val=None, std_val=None, method='minmax'):
-    if method == 'minmax':
-        return data * (max_val - min_val + 1e-8) + min_val
-    elif method == 'zscore':
-        return data * (std_val + 1e-8) + mean_val
-    else:
-        raise ValueError(f"Unknown normalization method: {method}")
+class Normalizer:
+    # Z-score归一化 零均值单位方差
+    def __init__(self):
+        self.mean = None
+        self.std = None
+    
+    def fit(self, data):
+        # data: (num_timesteps, num_nodes, num_features)
+        self.mean = np.mean(data, axis=(0, 1), keepdims=True)  # (1, 1, num_features)
+        # 在时间步和节点两个维度上计算统计量，得到的是每个特征独立的均值和标准差
+        self.std = np.std(data, axis=(0, 1), keepdims=True)    # (1, 1, num_features)
+        # 这样transform中的减法和除法可以自动广播到原数据的(T, N, F)形状
+        self.std[self.std < 1e-8] = 1e-8  # 避免除以0 将小于1e-8的标准差替换为1e-8，避免除以零错误
+        print(f"[INFO] Normalizer fitted: mean={self.mean.squeeze()}, std={self.std.squeeze()}")
+    
+    def transform(self, data):
+        return (data - self.mean) / self.std
+        # 加减乘除都可以依靠numpy的广播机制完成
+    
+    def inverse_transform(self, data):
+        return data * self.std + self.mean
+    
+    # Z-score标准化后，每个特征的均值为0，标准差为1
 
 def set_random_seed(seed):
     np.random.seed(seed) # NumPy的随机数生成器
