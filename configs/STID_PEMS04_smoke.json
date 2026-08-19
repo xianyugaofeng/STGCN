@@ -1,7 +1,7 @@
 {
     "SEED": 42,
     "DEVICE": "cuda:0",
-    "NUM_WORKERS": 2,
+    "NUM_WORKERS": 0,
 
     "DATASET_NAME": "PEMS04",
     "DATA_FILE_PATH": "PEMSdata/PEMS04/PEMS04.npz",
@@ -29,8 +29,8 @@
         "day_of_week_size": 7
     },
     "TRAIN_NUM_EPOCHS": 1,
-    "TRAIN_BATCH_SIZE": 64,
-    "TRAIN_LEARNING_RATE": 0.002,
+    "TRAIN_BATCH_SIZE": 8,
+    "TRAIN_LEARNING_RATE": 0.001,
     "TRAIN_WEIGHT_DECAY": 0.0001,
     "TRAIN_EARLY_STOPPING_PATIENCE": -1,
 
@@ -38,8 +38,8 @@
     "VAL_RATIO": 0.2,
     "TEST_RATIO": 0.2,
 
-    "VAL_BATCH_SIZE": 64,
-    "TEST_BATCH_SIZE": 64,
+    "VAL_BATCH_SIZE": 8,
+    "TEST_BATCH_SIZE": 8,
 
     "LOSS_FUNCTION": "masked_mae",
     "METRICS": ["MAE", "RMSE", "MAPE"],

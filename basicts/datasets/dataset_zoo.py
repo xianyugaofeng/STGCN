@@ -32,7 +32,7 @@ class PEMSDataset(Dataset):
 
 def load_pems_data(data_file_path, adj_file_path=None, max_train_samples=None, 
                    max_val_samples=None, max_test_samples=None, smoke_test_mode=False,
-                   normalize=True, train_ratio=0.6, val_ratio=0.2):
+                   normalize=True, train_ratio=0.6, val_ratio=0.2, return_offsets=False):
     # Load PEMS dataset
     print(f"[INFO] Loading data from {data_file_path}")
     
@@ -81,18 +81,24 @@ def load_pems_data(data_file_path, adj_file_path=None, max_train_samples=None,
 
     print(f"[INFO] Data loaded: train={train_data.shape}, val={val_data.shape}, test={test_data.shape}")
     
+    # 各切分在完整时间线上的全局起始下标 供STID等模型对齐时间特征
+    offsets = {'train': 0, 'val': train_end, 'test': val_end}
+    if return_offsets:
+        return train_data, val_data, test_data, adj_matrix, normalizer, offsets
     return train_data, val_data, test_data, adj_matrix, normalizer
 
 class STIDDataset(Dataset):
     # STID专用数据集:在(x, y)基础上附加时间特征(time_of_day, day_of_week)
     def __init__(self, data, input_length=12, output_length=12,
-                 mode='train', steps_per_day=288, add_time_of_day=True, add_day_of_week=True):
+                 mode='train', steps_per_day=288, add_time_of_day=True, add_day_of_week=True,
+                 global_start=0):
         self.input_length = input_length
         self.output_length = output_length
         self.mode = mode
         self.steps_per_day = steps_per_day
+        self.global_start = global_start
         self.num_features = data.shape[-1]
-        self.data = self.add_temporal_features(data, add_time_of_day, add_day_of_week, steps_per_day)
+        self.data = self.add_temporal_features(data, add_time_of_day, add_day_of_week, steps_per_day, global_start)
         self.num_samples = self.data.shape[0] - input_length - output_length + 1
         self.indices = [(i, i + input_length, i + input_length + output_length)
                         for i in range(self.num_samples)]
@@ -107,16 +113,16 @@ class STIDDataset(Dataset):
         return x, y
     
     @staticmethod
-    def add_temporal_features(data, add_time_of_day, add_day_of_week, steps_per_day=288):
+    def add_temporal_features(data, add_time_of_day, add_day_of_week, steps_per_day=288, global_start=0):
         T, N, C = data.shape
         feature_list = [data]
         if add_time_of_day:
-            time_of_day = np.array([(i % steps_per_day / steps_per_day) for i in range(T)])
+            time_of_day = np.array([((i + global_start) % steps_per_day / steps_per_day) for i in range(T)])
             time_of_day_tiled = np.tile(time_of_day, [1, N, 1]).transpose(2, 1, 0)
             feature_list.append(time_of_day_tiled)
         
         if add_day_of_week:
-            day_of_week = np.array([(i // steps_per_day) % 7 / 7 for i in range(T)])
+            day_of_week = np.array([((i + global_start) // steps_per_day) % 7 / 7 for i in range(T)])
             day_of_week_tiled = np.tile(day_of_week, [1, N, 1]).transpose(2, 1, 0)
             feature_list.append(day_of_week_tiled)
         

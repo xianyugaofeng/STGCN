@@ -20,8 +20,8 @@ class BaseDataProcessor:
         self.steps_per_day = config.get('STEPS_PER_DAY', 288)  # PEMS默认5分钟采样 一天288步
 
     def load_raw(self, mode):
-        # 复用load_pems_data加载并切分原始数据 返回三段数据+邻接矩阵+归一化器
-        train_data, val_data, test_data, adj_matrix, normalizer = load_pems_data(
+        # 复用load_pems_data加载并切分原始数据 返回三段数据+邻接矩阵+归一化器+各切分全局起始下标
+        train_data, val_data, test_data, adj_matrix, normalizer, offsets = load_pems_data(
             self.data_file_path, self.adj_file_path,
             max_train_samples=self.config.get('MAX_TRAIN_SAMPLES') if mode == 'train' else None,
             max_val_samples=self.config.get('MAX_VAL_SAMPLES') if mode == 'val' else None,
@@ -29,7 +29,8 @@ class BaseDataProcessor:
             smoke_test_mode=self.smoke_test_mode,
             normalize=self.normalize,
             train_ratio=self.train_ratio,
-            val_ratio=self.val_ratio
+            val_ratio=self.val_ratio,
+            return_offsets=True
         )
         # 无pickle邻接矩阵时，由各Processor的hook负责从CSV兜底生成
         if adj_matrix is None:
@@ -37,7 +38,7 @@ class BaseDataProcessor:
             if os.path.exists(csv_path):
                 print(f"[INFO] Creating adjacency matrix from CSV: {csv_path}")
                 adj_matrix = self.create_adjacency_from_csv(csv_path, train_data.shape[1])
-        return train_data, val_data, test_data, adj_matrix, normalizer
+        return train_data, val_data, test_data, adj_matrix, normalizer, offsets
 
     def create_adjacency_from_csv(self, csv_path, num_nodes=None, symmetric=True,
                                   default_diag=1.0, threshold=0.1,
@@ -100,18 +101,18 @@ class BaseDataProcessor:
         np.fill_diagonal(adj_matrix, default_diag)
         return adj_matrix
 
-    def build_dataset(self, data, mode):
+    def build_dataset(self, data, mode, global_start=0):
         # hook方法 子类重写以返回模型专属Dataset
         model_name = self.config.get('MODEL_NAME')
         return get_dataset(model_name)(data, self.input_length, self.output_length, mode=mode)
 
     def build_dataloader(self, mode):
         # 通用流程:加载原始数据->选取对应分段->构建Dataset->构建DataLoader
-        train_data, val_data, test_data, adj_matrix, normalizer = self.load_raw(mode)
+        train_data, val_data, test_data, adj_matrix, normalizer, offsets = self.load_raw(mode)
         data_map = {'train': train_data, 'val': val_data, 'test': test_data}
         if mode not in data_map:
             raise ValueError(f"Unknown mode: {mode}")
-        dataset = self.build_dataset(data_map[mode], mode)
+        dataset = self.build_dataset(data_map[mode], mode, global_start=offsets[mode])
         batch_size = self.config.get(f'{mode.upper()}_BATCH_SIZE', 32)
         num_workers = self.config.get('NUM_WORKERS', 2)
         dataloader = DataLoader(
@@ -128,11 +129,12 @@ class STGCNProcessor(BaseDataProcessor):
     pass
 class STIDProcessor(BaseDataProcessor):
     # STID数据处理:附加时间特征(ToD/DoW) 配合STID模型的embedding输入
-    def build_dataset(self, data, mode):
+    def build_dataset(self, data, mode, global_start=0):
         add_time_of_day = self.config.get('ADD_TIME_OF_DAY', True)
         add_day_of_week = self.config.get('ADD_DAY_OF_WEEK', True)
         return get_dataset('STID')(data, self.input_length, self.output_length,
-                           mode=mode, steps_per_day=self.steps_per_day, add_time_of_day=add_time_of_day, add_day_of_week=add_day_of_week)
+                           mode=mode, steps_per_day=self.steps_per_day, add_time_of_day=add_time_of_day, add_day_of_week=add_day_of_week,
+                           global_start=global_start)
 
     def create_adjacency_from_csv(self, csv_path, num_nodes=None, **kwargs):
         # STID为MLP模型 无需图结构 覆写hook不生成邻接矩阵

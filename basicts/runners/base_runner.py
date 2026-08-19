@@ -164,9 +164,9 @@ class BaseRunner:
                 pred = self.model(x, **model_kwargs)
                 loss = self.criterion(pred, y)
             
-            total_loss += loss.item() * x.size(0)
-            total_preds.append(pred.detach().cpu())
-            total_targets.append(y.detach().cpu())
+                total_loss += loss.item() * x.size(0)
+                total_preds.append(pred.detach().cpu())
+                total_targets.append(y.detach().cpu())
         
         avg_loss = total_loss / len(val_loader.dataset)
         total_preds = torch.cat(total_preds, dim=0)
