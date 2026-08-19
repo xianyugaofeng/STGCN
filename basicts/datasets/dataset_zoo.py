@@ -91,6 +91,7 @@ class STIDDataset(Dataset):
         self.output_length = output_length
         self.mode = mode
         self.steps_per_day = steps_per_day
+        self.num_features = data.shape[-1]
         self.data = self.add_temporal_features(data, add_time_of_day, add_day_of_week, steps_per_day)
         self.num_samples = self.data.shape[0] - input_length - output_length + 1
         self.indices = [(i, i + input_length, i + input_length + output_length)
@@ -102,7 +103,7 @@ class STIDDataset(Dataset):
     def __getitem__(self, idx):
         start, mid, end = self.indices[idx]
         x = self.data[start:mid]
-        y = self.data[mid:end]
+        y = self.data[mid:end][..., :self.num_features]
         return x, y
     
     @staticmethod

@@ -105,7 +105,7 @@ class BaseRunner:
         
         progress_bar = tqdm(train_loader, desc='Training', leave=False)
         # tqdm提供了友好的进度条，leave=False 表示该epoch结束后进度条会消失
-
+        
         for batch_idx, (x, y) in enumerate(progress_bar):
             # 同时通过enumerate获取batch_idx，便于后续判断是否到了打印频率
             # 每次迭代都会吐出一个形状为(BATCH_SIZE, ...)的张量x和y
@@ -113,11 +113,10 @@ class BaseRunner:
             y = y.to(self.device, dtype=torch.float32)
             # 将数据移到GPU/CPU
             # 同时强制转为float32，避免因数据加载时产生float64导致后续计算慢或报错
-
+            model_kwargs = self._get_model_kwargs()
             self.optimizer.zero_grad()
             # 每次迭代必须清空梯度，否则会累加
             # 通过hook机制获取模型额外参数（如拉普拉斯矩阵），使框架通用化
-            model_kwargs = self._get_model_kwargs(x)
             pred = self.model(x, **model_kwargs)
             loss = self.criterion(pred, y)
             
@@ -161,7 +160,7 @@ class BaseRunner:
                 y = y.to(self.device, dtype=torch.float32)
                 
                 # 通过hook机制获取模型额外参数
-                model_kwargs = self._get_model_kwargs(x)
+                model_kwargs = self._get_model_kwargs()
                 pred = self.model(x, **model_kwargs)
                 loss = self.criterion(pred, y)
             
@@ -182,7 +181,7 @@ class BaseRunner:
         
         return avg_loss, metrics
     
-    def _get_model_kwargs(self, x):
+    def _get_model_kwargs(self):
         # Hook方法：返回传递给模型forward的额外参数
         # 默认返回空字典，子类可重写以提供模型特定的参数（如拉普拉斯矩阵）
         # 这使BaseRunner保持通用性，不绑定任何特定模型的逻辑

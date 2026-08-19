@@ -26,7 +26,7 @@ class STGCNRunner(BaseRunner):
         # 对称归一化：D^{-1/2} * A * D^{-1/2}
         return laplacian
 
-    def _get_model_kwargs(self, x):
+    def _get_model_kwargs(self):
         # 重写hook：向STGCN模型传递拉普拉斯矩阵
         # 使用缓存避免每个batch重复计算
         if self.adj_matrix is None:

@@ -1,7 +1,7 @@
 import numpy as np
 
 # 查看PEMS04数据特征分布
-data = np.load('STGCN_data/PEMS04/PEMS04.npz')['data']
+data = np.load('PEMSdata/PEMS04/PEMS04.npz')['data']
 print(f"数据形状: {data.shape}")
 print(f"\n特征0（流量）范围: [{data[:,:,0].min():.2f}, {data[:,:,0].max():.2f}], 均值: {data[:,:,0].mean():.2f}")
 print(f"特征1（速度）范围: [{data[:,:,1].min():.2f}, {data[:,:,1].max():.2f}], 均值: {data[:,:,1].mean():.2f}")
