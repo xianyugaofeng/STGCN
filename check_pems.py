@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 def check_dataset(dataset_name, data_dir="datasets"):
     # 检查PEMS数据集基础信息 区分真实0值与异常缺失
-    file_path = f'STGCN_data/{data_dir}/{dataset_name}.npz'
+    file_path = f'PEMSdata/{data_dir}/{dataset_name}.npz'
     if not os.path.exists(file_path): # 若该文件不存在，直接返回一条提示字符串
         return f"{dataset_name}文件不存在: {file_path}"
 
@@ -54,8 +54,8 @@ for name in ["PEMS03", "PEMS04", "PEMS07", "PEMS08"]:
 # 生成概览表格
 if results:
     print("\n===== PEMS数据集概览 =====")
-    print(f"{'数据集':<6} {'节点数':<6} {'时间步':<8} {'时间范围':<20} {'维度':<15} {'缺失率':<8}")
+    print(f"{'数据集':<6} {'节点数':<6} {'时间步':<8} {'时间范围':<20} {'维度':<15}")
     print("-" * 80)
     for r in results:
-        print(f"{r['dataset']:<6} {r['nodes']:<6} {r['timesteps']:<8} {r['time_range']:<20} {r['dimensions']:<15}")
+        print(f"{r['dataset']:<6} {r['nodes']:<6} {r['timesteps']:<8} {r['time_range']:<30} {r['dimensions']:<15}")
 

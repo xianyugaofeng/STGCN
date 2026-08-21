@@ -1,0 +1,58 @@
+{
+    "SEED": 42,
+    "DEVICE": "cuda:0",
+    "NUM_WORKERS": 0,
+
+    "DATASET_NAME": "PEMS08",
+    "DATA_FILE_PATH": "PEMSdata/PEMS08/PEMS08.npz",
+    "ADJ_FILE_PATH": "PEMSdata/PEMS08/adj_PEMS08.pkl",
+
+    "INPUT_LENGTH": 12,
+    "OUTPUT_LENGTH": 12,
+    "NUM_NODES": 170,
+    "NUM_FEATURES": 3,
+
+    "MODEL_NAME": "STID",
+    "MODEL": "basicts.models.STID",
+    "RUNNER": "STIDRunner",
+    "MODEL_ARGS": {
+        "embed_dim": 32,    
+        "num_layer": 3, 
+        "if_node": true,
+        "input_dim": 3,
+        "node_dim": 32,
+        "if_time_in_day": true,
+        "if_day_in_week": true,
+        "temp_dim_tid": 32,
+        "temp_dim_diw": 32,
+        "time_of_day_size": 288,
+        "day_of_week_size": 7
+    },
+    "TRAIN_NUM_EPOCHS": 1,
+    "TRAIN_BATCH_SIZE": 8,
+    "TRAIN_LEARNING_RATE": 0.001,
+    "TRAIN_WEIGHT_DECAY": 0.0001,
+    "TRAIN_EARLY_STOPPING_PATIENCE": -1,
+
+    "TRAIN_RATIO": 0.6,
+    "VAL_RATIO": 0.2,
+    "TEST_RATIO": 0.2,
+
+    "VAL_BATCH_SIZE": 8,
+    "TEST_BATCH_SIZE": 8,
+
+    "LOSS_FUNCTION": "masked_mae",
+    "METRICS": ["MAE", "RMSE", "MAPE"],
+
+    "LOG_DIR": "outputs/smoke_STID_PEMS08",
+    "SAVE_MODEL": true,
+    "PRINT_FREQ": 10,
+
+    "MAX_TRAIN_SAMPLES": null,
+    "MAX_VAL_SAMPLES": null,
+    "MAX_TEST_SAMPLES": null,
+    "NORMALIZE": true,
+
+    "ADD_TIME_OF_DAY": true,
+    "ADD_DAY_OF_WEEK": true
+}

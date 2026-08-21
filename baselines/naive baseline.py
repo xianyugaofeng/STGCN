@@ -78,6 +78,20 @@ def create_sliding_window_samples(data, input_length, output_length):
     # returns: x (num_samples, input_length, ...)
     #          y (num_sampels, output_length, ...)
 
+def create_sliding_window_samples(data, input_length, output_length):
+    # 创建滑动窗口样本 与PEMSDataset相同的方式
+    num_samples = data.shape[0] - input_length - output_length + 1
+    x_list = []
+    y_list = []
+    for i in range(num_samples):
+        x = data[i:i+input_length]
+        y = data[i+input_length:i+input_length+output_length]
+        x_list.append(x)
+        y_list.append(y)
+    return np.array(x_list), np.array(y_list)
+    # returns: x (num_samples, input_length, ...)
+    #          y (num_sampels, output_length, ...)
+
 def evaluate_baseline(config):
     # 评估所有baseline模型
     print("=" * 70)
@@ -159,7 +173,7 @@ def evaluate_baseline(config):
           f"RMSE={results[best_model]['RMSE']:.4f}, MAPE={results[best_model]['MAPE']:.2f}%")
     
     # 保存结果
-    output_dir = config.get('LOG_DIR', 'outputs/STGCN_PEMS04')
+    output_dir = config.get('LOG_DIR', 'outputs/smoke_STGCN_PEMS04')
     os.makedirs(output_dir, exist_ok=True)
     
     baseline_results = {
@@ -187,16 +201,8 @@ def evaluate_baseline(config):
 
 if __name__ == '__main__':
     # 使用默认配置或从命令行读取
-    config = {
-        'DATA_FILE_PATH': 'STGCN_data/PEMS04/PEMS04.npz',
-        'ADJ_FILE_PATH': 'STGCN_data/PEMS04/adj_PEMS04.pkl',
-        'INPUT_LENGTH': 12,
-        'OUTPUT_LENGTH': 12,
-        'METRICS': ['MAE', 'RMSE', 'MAPE'],
-        'LOG_DIR': 'outputs/STGCN_PEMS04',
-        'MAX_TRAIN_SAMPLES': None,
-        'MAX_VAL_SAMPLES': None,
-        'MAX_TEST_SAMPLES': None
-    }
+    cfg_path = 'configs\STGCN_PEMS04_smoke.json'
+    with open(cfg_path, 'r', encoding='utf-8') as f:
+        config = json.load(f)
     
     evaluate_baseline(config)

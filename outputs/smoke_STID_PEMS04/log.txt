@@ -152,3 +152,201 @@
 2026-08-19 20:28:15,315 - INFO - Best validation metrics: {'MAE': 8.532769203186035, 'RMSE': 21.82967758178711, 'MAPE': 11.669217109680176}
 2026-08-19 20:28:15,315 - INFO - Training finished at 2026-08-19 20:28:15.315408
 2026-08-19 20:28:15,315 - INFO - ============================================================
+2026-08-21 16:55:45,817 - INFO - Using GPU: cuda:0
+2026-08-21 16:55:46,606 - INFO - Model: STID
+2026-08-21 16:55:46,606 - INFO - Model args: {'embed_dim': 32, 'num_layer': 3, 'if_node': True, 'input_dim': 3, 'node_dim': 32, 'if_time_in_day': True, 'if_day_in_week': True, 'temp_dim_tid': 32, 'temp_dim_diw': 32, 'time_of_day_size': 288, 'day_of_week_size': 7, 'num_nodes': 170, 'num_features': 3, 'input_length': 12, 'output_length': 12}
+2026-08-21 16:55:46,607 - INFO - Total parameters: 119,780
+2026-08-21 16:55:47,838 - INFO - ============================================================
+2026-08-21 16:55:47,838 - INFO - Training started at 2026-08-21 16:55:47.838157
+2026-08-21 16:55:47,838 - INFO - Config: {
+  "SEED": 42,
+  "DEVICE": "cuda:0",
+  "NUM_WORKERS": 0,
+  "DATASET_NAME": "PEMS04",
+  "DATA_FILE_PATH": "PEMSdata/PEMS04/PEMS04.npz",
+  "ADJ_FILE_PATH": "PEMSdata/PEMS04/adj_PEMS04.pkl",
+  "INPUT_LENGTH": 12,
+  "OUTPUT_LENGTH": 12,
+  "NUM_NODES": 170,
+  "NUM_FEATURES": 3,
+  "MODEL_NAME": "STID",
+  "MODEL": "basicts.models.STID",
+  "RUNNER": "STIDRunner",
+  "MODEL_ARGS": {
+    "embed_dim": 32,
+    "num_layer": 3,
+    "if_node": true,
+    "input_dim": 3,
+    "node_dim": 32,
+    "if_time_in_day": true,
+    "if_day_in_week": true,
+    "temp_dim_tid": 32,
+    "temp_dim_diw": 32,
+    "time_of_day_size": 288,
+    "day_of_week_size": 7,
+    "num_nodes": 170,
+    "num_features": 3,
+    "input_length": 12,
+    "output_length": 12
+  },
+  "TRAIN_NUM_EPOCHS": 1,
+  "TRAIN_BATCH_SIZE": 8,
+  "TRAIN_LEARNING_RATE": 0.001,
+  "TRAIN_WEIGHT_DECAY": 0.0001,
+  "TRAIN_EARLY_STOPPING_PATIENCE": -1,
+  "TRAIN_RATIO": 0.6,
+  "VAL_RATIO": 0.2,
+  "TEST_RATIO": 0.2,
+  "VAL_BATCH_SIZE": 8,
+  "TEST_BATCH_SIZE": 8,
+  "LOSS_FUNCTION": "masked_mae",
+  "METRICS": [
+    "MAE",
+    "RMSE",
+    "MAPE"
+  ],
+  "LOG_DIR": "outputs/smoke_STID_PEMS04",
+  "SAVE_MODEL": true,
+  "PRINT_FREQ": 10,
+  "MAX_TRAIN_SAMPLES": null,
+  "MAX_VAL_SAMPLES": null,
+  "MAX_TEST_SAMPLES": null,
+  "NORMALIZE": true,
+  "ADD_TIME_OF_DAY": true,
+  "ADD_DAY_OF_WEEK": true
+}
+2026-08-21 16:55:47,840 - INFO - ============================================================
+2026-08-21 16:55:47,840 - INFO - 
+--- Epoch 1/1 ---
+2026-08-21 16:56:56,742 - INFO - Using GPU: cuda:0
+2026-08-21 16:56:57,458 - INFO - Model: STID
+2026-08-21 16:56:57,458 - INFO - Model args: {'embed_dim': 32, 'num_layer': 3, 'if_node': True, 'input_dim': 3, 'node_dim': 32, 'if_time_in_day': True, 'if_day_in_week': True, 'temp_dim_tid': 32, 'temp_dim_diw': 32, 'time_of_day_size': 288, 'day_of_week_size': 7, 'num_nodes': 170, 'num_features': 3, 'input_length': 12, 'output_length': 12}
+2026-08-21 16:56:57,458 - INFO - Total parameters: 119,780
+2026-08-21 16:56:58,026 - INFO - ============================================================
+2026-08-21 16:56:58,026 - INFO - Training started at 2026-08-21 16:56:58.026958
+2026-08-21 16:56:58,026 - INFO - Config: {
+  "SEED": 42,
+  "DEVICE": "cuda:0",
+  "NUM_WORKERS": 0,
+  "DATASET_NAME": "PEMS04",
+  "DATA_FILE_PATH": "PEMSdata/PEMS04/PEMS04.npz",
+  "ADJ_FILE_PATH": "PEMSdata/PEMS04/adj_PEMS04.pkl",
+  "INPUT_LENGTH": 12,
+  "OUTPUT_LENGTH": 12,
+  "NUM_NODES": 170,
+  "NUM_FEATURES": 3,
+  "MODEL_NAME": "STID",
+  "MODEL": "basicts.models.STID",
+  "RUNNER": "STIDRunner",
+  "MODEL_ARGS": {
+    "embed_dim": 32,
+    "num_layer": 3,
+    "if_node": true,
+    "input_dim": 3,
+    "node_dim": 32,
+    "if_time_in_day": true,
+    "if_day_in_week": true,
+    "temp_dim_tid": 32,
+    "temp_dim_diw": 32,
+    "time_of_day_size": 288,
+    "day_of_week_size": 7,
+    "num_nodes": 170,
+    "num_features": 3,
+    "input_length": 12,
+    "output_length": 12
+  },
+  "TRAIN_NUM_EPOCHS": 1,
+  "TRAIN_BATCH_SIZE": 8,
+  "TRAIN_LEARNING_RATE": 0.001,
+  "TRAIN_WEIGHT_DECAY": 0.0001,
+  "TRAIN_EARLY_STOPPING_PATIENCE": -1,
+  "TRAIN_RATIO": 0.6,
+  "VAL_RATIO": 0.2,
+  "TEST_RATIO": 0.2,
+  "VAL_BATCH_SIZE": 8,
+  "TEST_BATCH_SIZE": 8,
+  "LOSS_FUNCTION": "masked_mae",
+  "METRICS": [
+    "MAE",
+    "RMSE",
+    "MAPE"
+  ],
+  "LOG_DIR": "outputs/smoke_STID_PEMS04",
+  "SAVE_MODEL": true,
+  "PRINT_FREQ": 10,
+  "MAX_TRAIN_SAMPLES": null,
+  "MAX_VAL_SAMPLES": null,
+  "MAX_TEST_SAMPLES": null,
+  "NORMALIZE": true,
+  "ADD_TIME_OF_DAY": true,
+  "ADD_DAY_OF_WEEK": true
+}
+2026-08-21 16:56:58,026 - INFO - ============================================================
+2026-08-21 16:56:58,026 - INFO - 
+--- Epoch 1/1 ---
+2026-08-21 16:57:21,262 - INFO - Using GPU: cuda:0
+2026-08-21 16:57:21,969 - INFO - Model: STID
+2026-08-21 16:57:21,969 - INFO - Model args: {'embed_dim': 32, 'num_layer': 3, 'if_node': True, 'input_dim': 3, 'node_dim': 32, 'if_time_in_day': True, 'if_day_in_week': True, 'temp_dim_tid': 32, 'temp_dim_diw': 32, 'time_of_day_size': 288, 'day_of_week_size': 7, 'num_nodes': 170, 'num_features': 3, 'input_length': 12, 'output_length': 12}
+2026-08-21 16:57:21,969 - INFO - Total parameters: 119,780
+2026-08-21 16:57:22,519 - INFO - ============================================================
+2026-08-21 16:57:22,519 - INFO - Training started at 2026-08-21 16:57:22.519625
+2026-08-21 16:57:22,519 - INFO - Config: {
+  "SEED": 42,
+  "DEVICE": "cuda:0",
+  "NUM_WORKERS": 0,
+  "DATASET_NAME": "PEMS04",
+  "DATA_FILE_PATH": "PEMSdata/PEMS04/PEMS04.npz",
+  "ADJ_FILE_PATH": "PEMSdata/PEMS04/adj_PEMS04.pkl",
+  "INPUT_LENGTH": 12,
+  "OUTPUT_LENGTH": 12,
+  "NUM_NODES": 170,
+  "NUM_FEATURES": 3,
+  "MODEL_NAME": "STID",
+  "MODEL": "basicts.models.STID",
+  "RUNNER": "STIDRunner",
+  "MODEL_ARGS": {
+    "embed_dim": 32,
+    "num_layer": 3,
+    "if_node": true,
+    "input_dim": 3,
+    "node_dim": 32,
+    "if_time_in_day": true,
+    "if_day_in_week": true,
+    "temp_dim_tid": 32,
+    "temp_dim_diw": 32,
+    "time_of_day_size": 288,
+    "day_of_week_size": 7,
+    "num_nodes": 170,
+    "num_features": 3,
+    "input_length": 12,
+    "output_length": 12
+  },
+  "TRAIN_NUM_EPOCHS": 1,
+  "TRAIN_BATCH_SIZE": 8,
+  "TRAIN_LEARNING_RATE": 0.001,
+  "TRAIN_WEIGHT_DECAY": 0.0001,
+  "TRAIN_EARLY_STOPPING_PATIENCE": -1,
+  "TRAIN_RATIO": 0.6,
+  "VAL_RATIO": 0.2,
+  "TEST_RATIO": 0.2,
+  "VAL_BATCH_SIZE": 8,
+  "TEST_BATCH_SIZE": 8,
+  "LOSS_FUNCTION": "masked_mae",
+  "METRICS": [
+    "MAE",
+    "RMSE",
+    "MAPE"
+  ],
+  "LOG_DIR": "outputs/smoke_STID_PEMS04",
+  "SAVE_MODEL": true,
+  "PRINT_FREQ": 10,
+  "MAX_TRAIN_SAMPLES": null,
+  "MAX_VAL_SAMPLES": null,
+  "MAX_TEST_SAMPLES": null,
+  "NORMALIZE": true,
+  "ADD_TIME_OF_DAY": true,
+  "ADD_DAY_OF_WEEK": true
+}
+2026-08-21 16:57:22,521 - INFO - ============================================================
+2026-08-21 16:57:22,521 - INFO - 
+--- Epoch 1/1 ---

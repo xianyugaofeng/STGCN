@@ -15,6 +15,7 @@
 python "naive baseline.py"
 python scripts/train.py -c configs/STGCN_PEMS04_smoke.json
 python scripts/train.py -c configs/STID_PEMS04_smoke.json
+python scripts/train.py -c configs/STID_PEMS08_smoke.json
 ```
 
 支持的 Baseline 方法：
