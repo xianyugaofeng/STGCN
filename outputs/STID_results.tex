@@ -1,0 +1,27 @@
+\documentclass{article}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{adjustbox}
+
+\begin{document}
+
+\begin{table}[htbp]
+\centering
+\caption{Unified comparison of STID models on PEMS04 and PEMS08 datasets. Best validation metrics reported.}
+\label{tab:unified_results}
+\small
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{lcccccccc}
+\toprule
+\textbf{Model} & \textbf{LR} & \textbf{BS} & \textbf{Epochs} & \textbf{Hidden} & \textbf{MLP} & \textbf{MAE} & \textbf{RMSE} & \textbf{MAPE (\%)} \\
+\midrule
+STID (PEMS04, smoke) & 0.001 & 8 & 1 & 32 & 3 & 8.533 & 21.830 & 11.669 \\
+STID (PEMS08, smoke) & 0.001 & 8 & 1 & 32 & 3 & 6.555 & 17.041 & 8.866 \\
+STID (PEMS04, full) & 0.002 & 64 & 100 & 32 & 3 & 7.139 & 18.742 & 9.699 \\
+STID (PEMS08, full) & 0.002 & 64 & 100 & 32 & 3 & 5.500 & 14.775 & 7.477 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\end{document}
