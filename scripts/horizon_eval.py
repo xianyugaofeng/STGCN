@@ -46,6 +46,7 @@ def load_model_and_config(model_path, config=None):
     if 'normalizer_state' in checkpoint:
         normalizer = Normalizer()
         normalizer.__dict__.update(checkpoint['normalizer_state'])
+        # 用checkpoint['normalizer_state']中的内容直接更新该实例的__dict__即对象的所有属性
     
     return model, config, normalizer
 
@@ -197,7 +198,7 @@ def get_model_kwargs(model_name, adj_matrix, config):
 
 
 def rolling_origin_evaluation(model, test_data, config, model_kwargs, 
-                              output_length=12, stride=1):
+                              output_length=12, stride=1, normalizer=None):
     """
     Rolling origin evaluation on test set.
     
@@ -210,7 +211,7 @@ def rolling_origin_evaluation(model, test_data, config, model_kwargs,
         stride: step size between rolling origins
     
     Returns:
-        horizon_errors: dict with keys 'MAE', 'MSE' containing arrays of shape (H,)
+        horizon_errors: dict with keys 'MAE', 'RMSE' containing arrays of shape (H,)
     """
     device = next(model.parameters()).device
     input_length = config.get('INPUT_LENGTH', 12)
@@ -233,7 +234,7 @@ def rolling_origin_evaluation(model, test_data, config, model_kwargs,
     all_preds = []  # list of (num_origins, N, C) for each horizon
     all_targets = []
     
-    num_origins = len(dataset)
+    num_origins = len(dataset) # 滑动窗口样本
     
     with torch.no_grad():
         for origin_idx in range(0, num_origins, stride):
@@ -253,54 +254,58 @@ def rolling_origin_evaluation(model, test_data, config, model_kwargs,
     
     # Compute metrics for each horizon
     horizon_mae = []
-    horizon_mse = []
+    horizon_rmse = []
     
     for tau in range(output_length):
         if len(all_preds[tau]) == 0:
             horizon_mae.append(np.nan)
-            horizon_mse.append(np.nan)
+            horizon_rmse.append(np.nan)
             continue
             
         preds_tau = torch.from_numpy(np.stack(all_preds[tau]))  # (num_origins, N, C)
         targets_tau = torch.from_numpy(np.stack(all_targets[tau]))
         
-        # Compute MSE and MAE
-        mse = torch.mean((preds_tau - targets_tau) ** 2).item()
-        mae = torch.mean(torch.abs(preds_tau - targets_tau)).item()
+        if normalizer is not None:
+            # Normalizer expects numpy array, returns numpy array
+            preds_tau = torch.from_numpy(normalizer.inverse_transform(preds_tau.numpy())).float()
+            targets_tau = torch.from_numpy(normalizer.inverse_transform(targets_tau.numpy())).float()
+            
+        from basicts.metrics import calculate_mae, calculate_rmse
+        # Compute MAE and RMSE
+        rmse = calculate_rmse(preds_tau, targets_tau)
+        mae = calculate_mae(preds_tau, targets_tau)
         
         horizon_mae.append(mae)
-        horizon_mse.append(mse)
+        horizon_rmse.append(rmse)
     
     return {
         'MAE': np.array(horizon_mae),
-        'MSE': np.array(horizon_mse),
+        'RMSE': np.array(horizon_rmse),
     }
 
 
 def plot_horizon_errors(horizon_errors, model_name, dataset_name, output_dir):
-    """Plot MAE and MSE vs horizon."""
+    """Plot MAE and RMSE vs horizon on a single figure with shared Y-axis."""
     output_length = len(horizon_errors['MAE'])
     horizons = np.arange(1, output_length + 1)
+    mae_vals = horizon_errors['MAE']
+    rmse_vals = horizon_errors['RMSE']
     
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    fig, ax = plt.subplots(figsize=(8, 5))
     
-    # MAE plot
-    ax1.plot(horizons, horizon_errors['MAE'], 'b-o', linewidth=2, markersize=6)
-    ax1.set_xlabel('Prediction Horizon (τ)', fontsize=12)
-    ax1.set_ylabel('MAE', fontsize=12)
-    ax1.set_title(f'{model_name} on {dataset_name} - MAE vs Horizon', fontsize=13)
-    ax1.grid(True, alpha=0.3)
-    ax1.set_xticks(horizons)
+    # MAE (blue)
+    ax.plot(horizons, mae_vals, 'b-o', linewidth=2, markersize=6, label='MAE')
+    # RMSE (red)
+    ax.plot(horizons, rmse_vals, 'r-s', linewidth=2, markersize=6, label='RMSE')
     
-    # MSE plot
-    ax2.plot(horizons, horizon_errors['MSE'], 'r-o', linewidth=2, markersize=6)
-    ax2.set_xlabel('Prediction Horizon (τ)', fontsize=12)
-    ax2.set_ylabel('MSE', fontsize=12)
-    ax2.set_title(f'{model_name} on {dataset_name} - MSE vs Horizon', fontsize=13)
-    ax2.grid(True, alpha=0.3)
-    ax2.set_xticks(horizons)
+    ax.set_xlabel('Prediction Horizon (τ)', fontsize=12)
+    ax.set_ylabel('MAE / RMSE', fontsize=12)
+    ax.set_title(f'{model_name} on {dataset_name} - MAE & RMSE vs Horizon', fontsize=13)
+    ax.set_xticks(horizons)
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc='upper left', fontsize=11)
     
-    plt.tight_layout()
+    fig.tight_layout()
     
     # Save
     os.makedirs(output_dir, exist_ok=True)
@@ -309,8 +314,9 @@ def plot_horizon_errors(horizon_errors, model_name, dataset_name, output_dir):
     plt.close()
     
     # Also save data
+
     np.savez(os.path.join(output_dir, f'horizon_{model_name}_{dataset_name}.npz'),
-             horizons=horizons, MAE=horizon_errors['MAE'], MSE=horizon_errors['MSE'])
+             horizons=horizons, MAE=mae_vals, RMSE=rmse_vals)
     
     print(f"Plot saved to {save_path}")
     return save_path
@@ -320,7 +326,6 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str, required=True, help='Path to model checkpoint')
-    parser.add_argument('--output_dir', type=str, default='outputs/horizon_plots')
     parser.add_argument('--stride', type=int, default=1, help='Stride between rolling origins')
     args = parser.parse_args()
     
@@ -342,23 +347,25 @@ def main():
     output_length = config.get('OUTPUT_LENGTH', 12)
     horizon_errors = rolling_origin_evaluation(
         model, test_data, config, model_kwargs, 
-        output_length=output_length, stride=args.stride
+        output_length=output_length, stride=args.stride,
+        normalizer=normalizer
     )
     
     print(f"\nHorizon MAE: {horizon_errors['MAE']}")
-    print(f"Horizon MSE: {horizon_errors['MSE']}")
+    print(f"Horizon RMSE: {horizon_errors['RMSE']}")
     
     model_name = config.get('MODEL_NAME', 'STGCN')
     dataset_name = config.get('DATASET_NAME', 'PEMS04')
     
     print(f"\nPlotting results...")
-    plot_horizon_errors(horizon_errors, model_name, dataset_name, args.output_dir)
+    output_dir = config.get('LOG_DIR', outputs/horizon_plots)
+    plot_horizon_errors(horizon_errors, model_name, dataset_name, output_dir)
     
     # Print table
-    print("\nHorizon | MAE       | MSE")
+    print("\nHorizon | MAE       | RMSE")
     print("--------|-----------|-----------")
     for tau in range(output_length):
-        print(f"{tau+1:7d} | {horizon_errors['MAE'][tau]:9.4f} | {horizon_errors['MSE'][tau]:9.4f}")
+        print(f"{tau+1:7d} | {horizon_errors['MAE'][tau]:9.4f} | {horizon_errors['RMSE'][tau]:9.4f}")
 
 
 if __name__ == '__main__':
