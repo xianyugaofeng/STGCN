@@ -358,7 +358,7 @@ def main():
     dataset_name = config.get('DATASET_NAME', 'PEMS04')
     
     print(f"\nPlotting results...")
-    output_dir = config.get('LOG_DIR', outputs/horizon_plots)
+    output_dir = config.get('LOG_DIR', 'outputs/horizon_plots')
     plot_horizon_errors(horizon_errors, model_name, dataset_name, output_dir)
     
     # Print table
