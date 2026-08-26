@@ -1,0 +1,36 @@
+{
+    "SEED": 42,
+    "DEVICE": "cuda:0",
+    "NUM_WORKERS": 2,
+
+    "DATASET_NAME": "PEMS-BAY",
+    "DATA_FILE_PATH": "PEMSdata/PEMS-BAY/PEMS-BAY.h5",
+    "ADJ_FILE_PATH": "PEMSdata/PEMS-BAY/adj_PEMS-BAY.pkl",
+
+    "INPUT_LENGTH": 12,
+    "OUTPUT_LENGTH": 12,
+    "NUM_NODES": 325,
+
+    "MODEL_NAME": "GraphWaveNet",
+    "MODEL": "basicts.models.GraphWaveNet",
+    "RUNNER": "GraphWaveNetRunner",
+
+    "TRAIN_LEARNING_RATE": 0.001,
+    "TRAIN_EARLY_STOPPING_PATIENCE": 10,    
+    "STEPS_PER_DAY": 288,
+
+    "LOSS_FUNCTION": "masked_mae",
+    "METRICS": ["MAE", "RMSE", "MAPE"],
+
+    "LOG_DIR": "outputs/GraphWaveNet_PEMS-BAY",
+    "SAVE_MODEL": true,
+    "PRINT_FREQ": 10,
+
+    "MAX_TRAIN_SAMPLES": null,
+    "MAX_VAL_SAMPLES": null,
+    "MAX_TEST_SAMPLES": null,
+    "NORMALIZE": true,
+
+    "ADD_TIME_OF_DAY": true,
+    "ADD_DAY_OF_WEEK": true
+}

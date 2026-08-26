@@ -1,8 +1,11 @@
 import os
 import numpy as np
 import pandas as pd
+import h5py
 from torch.utils.data import DataLoader
 from basicts.datasets.dataset_zoo import get_dataset, load_pems_data
+from.basicts.utils.data_utils import Normalizer
+import pickle
 
 class BaseDataProcessor:
     # 数据处理基类 封装加载/切分/归一化/构建DataLoader的通用流程
@@ -127,6 +130,7 @@ class BaseDataProcessor:
 class STGCNProcessor(BaseDataProcessor):
     # STGCN数据处理:标准(x, y)格式 无额外时间特征
     pass
+
 class STIDProcessor(BaseDataProcessor):
     # STID数据处理:附加时间特征(ToD/DoW) 配合STID模型的embedding输入
     def build_dataset(self, data, mode, global_start=0):
@@ -140,11 +144,71 @@ class STIDProcessor(BaseDataProcessor):
         # STID为MLP模型 无需图结构 覆写hook不生成邻接矩阵
         return None
 
+class GraphWaveNetProcessor(BaseDataProcessor):
+    def load_raw(self, mode):
+        # Load PEMS dataset
+        print(f"[INFO] Loading data from {self.data_file_path}")
+
+        # Load data
+        with h5py.File(self.data_file_path, 'r') as f:
+            group = list(f.keys())[0]
+            values = f[f'{group}/block0_values'][:]
+            columns = f[f'{group}/axis0'][:]
+            index = f[f'{group}/axis1'][:]
+        raw_df = pd.DataFrame(values, index=index, columns=columns)  # (num_timesteps, num_nodes)
+
+        # Load adjacency matrix if available
+        adj_matrix = None
+        if self.adj_file_path and os.path.exists(self.adj_file_path):
+            print(f"[INFO] Loading adjacency matrix from {self.adj_file_path}")
+            with open(self.adj_file_path, 'rb') as f:
+                adj_matrix = pickle.load(f) # 直接通过pickle.load反序列化得到adj_matrix，通常为(N, N)的矩阵
+        else:
+            print(f"[WARN] Adjacency matrix file not found: {self.adj_file_path}")
+            # CSV兜底已移交各Processor的create_adjacency_from_csv hook处理
+
+        # Train/Val/Test split (60%/20%/20%)
+        num_timesteps = raw_df.shape[0] # 总时间步数
+        train_end = int(num_timesteps * self.train_ratio) # 前60%作为训练集
+        val_end = train_end + int(num_timesteps * self.val_ratio) # 接着20%作为验证集, 20%为测试集
+
+        train_df = raw_df.iloc[:train_end]
+        val_df = raw_df.iloc[train_end:val_end]
+        test_df = raw_df.iloc[val_end:]
+
+        # Z-score归一化（仅使用训练集统计量）
+        normalizer = None
+        if self.normalize:
+            normalizer = Normalizer()
+            normalizer.fit(train_df.values)
+            train_df = pd.DataFrame(normalizer.transform(train_df.values), index=train_df.index, columns=train_df.columns)
+            val_df = pd.DataFrame(normalizer.transform(val_df.values), index=val_df.index, columns=val_df.columns)
+            test_df = pd.DataFrame(normalizer.transform(test_df.values), index=test_df.index, columns=test_df.columns)
+            print(f"[INFO] Data normalized using Z-score")
+
+        print(f"[INFO] Data loaded: train={train_df.shape}, val={val_df.shape}, test={test_df.shape}")
+
+        # 各切分在完整时间线上的全局起始下标 供GraphWaveNet等模型对齐时间特征
+        offsets = {'train': 0, 'val': train_end, 'test': val_end}
+        return train_df, val_df, test_df, adj_matrix, normalizer, offsets
+
+    def build_dataset(self, data, mode, global_start=0):
+        add_time_of_day = self.config.get('ADD_TIME_OF_DAY', True)
+        add_day_of_week = self.config.get('ADD_DAY_OF_WEEK', True)
+        return get_dataset('GraphWaveNet')(data, self.input_length, self.output_length,
+                           mode=mode, steps_per_day=self.steps_per_day, add_time_of_day=add_time_of_day, add_day_of_week=add_day_of_week,
+                           global_start=global_start)
+
+    def create_adjacency_from_csv(self, csv_path, num_nodes=None, **kwargs):
+        # GraphWaveNet自适应矩阵 无需图结构 覆写hook不生成邻接矩阵
+        return None
+
 # 数据处理器注册表:新增模型只需在此注册对应Processor 无需改动build_dataloader
 PROCESSOR_ZOO = {
     'Base': BaseDataProcessor,
     'STGCN': STGCNProcessor,
     'STID': STIDProcessor,
+    'GraphWaveNet': GraphWaveNetProcessor
 }
 
 def get_processor(name):

@@ -130,6 +130,7 @@ class STID(nn.Module):
         node_emb = []
         node_emb.append(self.node_emb.unsqueeze(0).expand(
                         batch_size, -1, -1).transpose(1, 2).unsqueeze(-1))
+                        # [B, node_dim, N, 1]
         # expand不会复制数据，而是返回一个新的视图，在指定维度上扩展大小为1的维度
         # -1表示该维度保持原大小不变
 

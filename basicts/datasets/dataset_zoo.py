@@ -5,31 +5,6 @@ import pickle
 from torch.utils.data import Dataset
 from basicts.utils.data_utils import Normalizer
 
-class PEMSDataset(Dataset):
-    # 原始数据(总时长, 节点数, 特征数)按固定长度切分成监督学习样本
-    # PEMS Dataset for Traffic Forecasting
-    def __init__(self, data, input_length=12, output_length=12, mode='train'):
-        self.data = data
-        self.input_length = input_length
-        self.output_length = output_length
-        self.mode = mode
-        self.num_samples = data.shape[0] - input_length - output_length + 1
-        # 总时间步T_total中，用长度为input_length+output_length的窗口滑动，能切出的样本数
-        # Precompute indices
-        self.indices = [(i, i + input_length, i + input_length + output_length) 
-                       for i in range(self.num_samples)]
-        # 每个元组(start, mid, end) start输入起始位置 mid输入结束位置 end输出结束位置
-
-    def __len__(self):
-        return self.num_samples
-        # 返回样本总数num_samples 供DataLoader使用
-    
-    def __getitem__(self, idx):
-        start, mid, end = self.indices[idx] # 第idx个样本的输入和目标
-        x = self.data[start:mid]  # (input_length, num_nodes, num_features)
-        y = self.data[mid:end]    # (output_length, num_nodes, num_features)
-        return x, y
-
 def load_pems_data(data_file_path, adj_file_path=None, max_train_samples=None, 
                    max_val_samples=None, max_test_samples=None, smoke_test_mode=False,
                    normalize=True, train_ratio=0.6, val_ratio=0.2, return_offsets=False):
@@ -58,17 +33,6 @@ def load_pems_data(data_file_path, adj_file_path=None, max_train_samples=None,
     val_data = data[train_end:val_end]
     test_data = data[val_end:]
     
-    # Apply smoke test limits
-    if smoke_test_mode:
-        if max_train_samples:
-            train_data = train_data[:max_train_samples + 12 + 12]
-            # 为滑动窗口留足余量 保证PEMSDataset能够切出至少100个样本
-        if max_val_samples:
-            val_data = val_data[:max_val_samples + 12 + 12]
-        if max_test_samples:
-            test_data = test_data[:max_test_samples + 12 + 12]
-        # 形状均为(子集长度, num_nodes, num_features)
-    
     # Z-score归一化（仅使用训练集统计量）
     normalizer = None
     if normalize:
@@ -86,6 +50,33 @@ def load_pems_data(data_file_path, adj_file_path=None, max_train_samples=None,
     if return_offsets:
         return train_data, val_data, test_data, adj_matrix, normalizer, offsets
     return train_data, val_data, test_data, adj_matrix, normalizer
+
+
+class PEMSDataset(Dataset):
+    # 原始数据(总时长, 节点数, 特征数)按固定长度切分成监督学习样本
+    # PEMS Dataset for Traffic Forecasting
+    def __init__(self, data, input_length=12, output_length=12, mode='train'):
+        self.data = data
+        self.input_length = input_length
+        self.output_length = output_length
+        self.mode = mode
+        self.num_samples = data.shape[0] - input_length - output_length + 1
+        # 总时间步T_total中，用长度为input_length+output_length的窗口滑动，能切出的样本数
+        # Precompute indices
+        self.indices = [(i, i + input_length, i + input_length + output_length) 
+                       for i in range(self.num_samples)]
+        # 每个元组(start, mid, end) start输入起始位置 mid输入结束位置 end输出结束位置
+
+    def __len__(self):
+        return self.num_samples
+        # 返回样本总数num_samples 供DataLoader使用
+    
+    def __getitem__(self, idx):
+        start, mid, end = self.indices[idx] # 第idx个样本的输入和目标
+        x = self.data[start:mid]  # (input_length, num_nodes, num_features)
+        y = self.data[mid:end]    # (output_length, num_nodes, num_features)
+        return x, y
+
 
 class STIDDataset(Dataset):
     # STID专用数据集:在(x, y)基础上附加时间特征(time_of_day, day_of_week)
@@ -118,13 +109,59 @@ class STIDDataset(Dataset):
         feature_list = [data]
         if add_time_of_day:
             time_of_day = np.array([((i + global_start) % steps_per_day / steps_per_day) for i in range(T)])
+            # [T,] np.tile的重复参数[1, N, 1] 先把time_of_day提升为三维(1, 1, T)
             time_of_day_tiled = np.tile(time_of_day, [1, N, 1]).transpose(2, 1, 0)
-            feature_list.append(time_of_day_tiled)
+            feature_list.append(time_of_day_tiled) # [T, N, 1]
         
         if add_day_of_week:
             day_of_week = np.array([((i + global_start) // steps_per_day) % 7 / 7 for i in range(T)])
             day_of_week_tiled = np.tile(day_of_week, [1, N, 1]).transpose(2, 1, 0)
-            feature_list.append(day_of_week_tiled)
+            feature_list.append(day_of_week_tiled) # [T, N, 1]
+        
+        data_with_features = np.concatenate(feature_list, axis=-1)
+        return data_with_features
+
+class PEMS-BAYDataset(Dataset):
+    # GraphWaveNet专用数据集:在(x, y)基础上附加时间特征(time_of_day, day_of_week)
+    def __init__(self, data, input_length=12, output_length=12,
+                 mode='train', steps_per_day=288, add_time_of_day=True, add_day_of_week=True,
+                 global_start=0):
+        self.input_length = input_length
+        self.output_length = output_length
+        self.mode = mode
+        self.steps_per_day = steps_per_day
+        self.global_start = global_start
+        self.num_features = data.shape[-1]
+        self.data = self.add_temporal_features(data, add_time_of_day, add_day_of_week, steps_per_day, global_start)
+        self.num_samples = self.data.shape[0] - input_length - output_length + 1
+        self.indices = [(i, i + input_length, i + input_length + output_length)
+                        for i in range(self.num_samples)]
+
+    def __len__(self):
+        return self.num_samples
+
+    def __getitem__(self, idx):
+        start, mid, end = self.indices[idx]
+        x = self.data[start:mid]
+        y = self.data[mid:end][..., :self.num_features]
+        return x, y
+    
+    @staticmethod
+    def add_temporal_features(df, add_time_of_day, add_day_of_week, steps_per_day=288, global_start=0):
+        T, N = df.shape
+        data = np.expand_dims(df.values, axis=-1)
+        feature_list = [data]
+        if add_time_of_day:
+            # 原始时间戳 - 日期零点
+            time_of_day = (df.index.values - df.index.values.astype("datetime64[D]")) / np.timedelta(1, "D")
+            # [T,] np.tile的重复参数[1, N, 1] 先把time_of_day提升为三维(1, 1, T)
+            time_of_day_tiled = np.tile(time_of_day, [1, N, 1]).transpose(2, 1, 0)
+            feature_list.append(time_of_day_tiled) # [T, N, 1]
+        
+        if add_day_of_week:
+            day_of_week = df.index.dayofweek
+            day_of_week_tiled = np.tile(day_of_week, [1, N, 1]).transpose(2, 1, 0)
+            feature_list.append(day_of_week_tiled) # [T, N, 1]
         
         data_with_features = np.concatenate(feature_list, axis=-1)
         return data_with_features
@@ -132,7 +169,8 @@ class STIDDataset(Dataset):
 DATASET_ZOO = {
     'PEMS': PEMSDataset,
     'STGCN': PEMSDataset,
-    'STID': STIDDataset
+    'STID': STIDDataset,
+    'GraphWaveNet': PEMS-BAYDataset
 }
 
 def get_dataset(dataset_name):
