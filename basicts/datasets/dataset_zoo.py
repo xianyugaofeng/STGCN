@@ -164,6 +164,10 @@ class PEMS-BAYDataset(Dataset):
             feature_list.append(day_of_week_tiled) # [T, N, 1]
         
         data_with_features = np.concatenate(feature_list, axis=-1)
+
+        normalizer = Normalizer()
+        normalizer.fit(data_with_features)
+        print(f"[INFO] {self.mode.upper()} Data normalized using Z-score")
         return data_with_features
 
 DATASET_ZOO = {

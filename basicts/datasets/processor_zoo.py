@@ -4,7 +4,7 @@ import pandas as pd
 import h5py
 from torch.utils.data import DataLoader
 from basicts.datasets.dataset_zoo import get_dataset, load_pems_data
-from.basicts.utils.data_utils import Normalizer
+from basicts.utils.data_utils import Normalizer
 import pickle
 
 class BaseDataProcessor:
@@ -167,24 +167,14 @@ class GraphWaveNetProcessor(BaseDataProcessor):
             print(f"[WARN] Adjacency matrix file not found: {self.adj_file_path}")
             # CSV兜底已移交各Processor的create_adjacency_from_csv hook处理
 
-        # Train/Val/Test split (60%/20%/20%)
+        # Train/Val/Test split (70%/20%/10%)
         num_timesteps = raw_df.shape[0] # 总时间步数
-        train_end = int(num_timesteps * self.train_ratio) # 前60%作为训练集
-        val_end = train_end + int(num_timesteps * self.val_ratio) # 接着20%作为验证集, 20%为测试集
+        train_end = int(num_timesteps * self.train_ratio) # 前70%作为训练集
+        val_end = train_end + int(num_timesteps * self.val_ratio) # 接着20%作为验证集, 10%为测试集
 
         train_df = raw_df.iloc[:train_end]
         val_df = raw_df.iloc[train_end:val_end]
         test_df = raw_df.iloc[val_end:]
-
-        # Z-score归一化（仅使用训练集统计量）
-        normalizer = None
-        if self.normalize:
-            normalizer = Normalizer()
-            normalizer.fit(train_df.values)
-            train_df = pd.DataFrame(normalizer.transform(train_df.values), index=train_df.index, columns=train_df.columns)
-            val_df = pd.DataFrame(normalizer.transform(val_df.values), index=val_df.index, columns=val_df.columns)
-            test_df = pd.DataFrame(normalizer.transform(test_df.values), index=test_df.index, columns=test_df.columns)
-            print(f"[INFO] Data normalized using Z-score")
 
         print(f"[INFO] Data loaded: train={train_df.shape}, val={val_df.shape}, test={test_df.shape}")
 

@@ -14,10 +14,33 @@
     "MODEL_NAME": "GraphWaveNet",
     "MODEL": "basicts.models.GraphWaveNet",
     "RUNNER": "GraphWaveNetRunner",
-
+    "MODEL_ARGS": {
+        "embed_dim": 32,    
+        "num_layer": 3, 
+        "if_node": true,
+        "input_dim": 3,
+        "node_dim": 32,
+        "if_time_in_day": true,
+        "if_day_in_week": true,
+        "temp_dim_tid": 32,
+        "temp_dim_diw": 32,
+        "time_of_day_size": 288,
+        "day_of_week_size": 7
+    },
+    
+    "TRAIN_NUM_EPOCHS": 100,
+    "TRAIN_BATCH_SIZE": 64,
     "TRAIN_LEARNING_RATE": 0.001,
-    "TRAIN_EARLY_STOPPING_PATIENCE": 10,    
+    "TRAIN_WEIGHT_DECAY": 0.0001,
+    "TRAIN_EARLY_STOPPING_PATIENCE": 10,
+
+    "TRAIN_RATIO": 0.7,
+    "VAL_RATIO": 0.2,
+    "TEST_RATIO": 0.1,
     "STEPS_PER_DAY": 288,
+
+    "VAL_BATCH_SIZE": 64,
+    "TEST_BATCH_SIZE": 64,
 
     "LOSS_FUNCTION": "masked_mae",
     "METRICS": ["MAE", "RMSE", "MAPE"],

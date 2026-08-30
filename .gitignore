@@ -19,4 +19,5 @@
 /basicts/metrics/__pycache__/
 /basicts/utils/__pycache__/
 /basicts/models/STID/__pycache__/
+/basicts/models/GraphWaveNet/__pycache__/
 /PEMSdata/
