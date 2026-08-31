@@ -7,8 +7,8 @@ class STGCNRunner(BaseRunner):
     # 负责计算和管理拉普拉斯矩阵，这是图卷积网络特有的需求
     # 通过重写_get_model_kwargs hook向模型传递laplacian参数
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, adj_matrix=None):
+        super().__init__(config, adj_matrix=adj_matrix)
         self._cached_laplacian = None  # 拉普拉斯矩阵缓存
 
     def _compute_laplacian(self, adj_matrix):

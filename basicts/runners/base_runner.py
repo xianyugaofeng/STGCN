@@ -8,7 +8,7 @@ import json
 
 class BaseRunner:
     # 把训练过程中所有需要反复编写的通用逻辑
-    def __init__(self, config):
+    def __init__(self, config, adj_matrix=None):
         self.config = config
         
         # 创建logger（必须在device之前创建，因为_init_device会使用logger）
@@ -17,6 +17,8 @@ class BaseRunner:
         self.logger = Logger(self.log_dir)
         
         self.device = self._init_device()
+        # 邻接矩阵必须在模型构建前就位（GWNet等模型按supports数量确定GCN通道数）
+        self.adj_matrix = adj_matrix
         self.model = self._init_model() 
         # _init_model()：构建具体的网络结构并移动到self.device
         self.optimizer = self._init_optimizer()
@@ -25,7 +27,6 @@ class BaseRunner:
         # _init_criterion()：定义损失函数
         self.scheduler = self._init_scheduler()
         # _init_scheduler()：学习率调度器
-        self.adj_matrix = None
         
         self.num_epochs = config.get('TRAIN_NUM_EPOCHS', 100)
         self.print_freq = config.get('PRINT_FREQ', 10)

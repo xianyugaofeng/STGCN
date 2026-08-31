@@ -1,0 +1,79 @@
+2026-08-31 23:41:21,789 - INFO - Using GPU: cuda:0
+2026-08-31 23:41:21,789 - INFO - Extracted 1 adjacency matrix from pkl
+2026-08-31 23:41:22,609 - INFO - Model: GraphWaveNet
+2026-08-31 23:41:22,609 - INFO - Model args: {'supports': 'list of 1 matrices', 'aptinit': None, 'dropout': 0.3, 'gcn_bool': True, 'addaptadj': True, 'input_dim': 3, 'output_dim': 1, 'embed_dim': 5, 'residual_channels': 16, 'dilation_channels': 16, 'skip_channels': 64, 'end_channels': 128, 'kernel_size': 2, 'blocks': 2, 'layers': 2, 'num_nodes': 325, 'input_length': 12, 'output_length': 12}
+2026-08-31 23:41:22,609 - INFO - Total parameters: 28,158
+2026-08-31 23:41:23,619 - INFO - ============================================================
+2026-08-31 23:41:23,619 - INFO - Training started at 2026-08-31 23:41:23.619026
+2026-08-31 23:41:23,620 - INFO - Config: {
+  "SEED": 42,
+  "DEVICE": "cuda:0",
+  "NUM_WORKERS": 2,
+  "DATASET_NAME": "PEMS-BAY",
+  "DATA_FILE_PATH": "PEMSdata/PEMS-BAY/PEMS-BAY.h5",
+  "ADJ_FILE_PATH": "PEMSdata/PEMS-BAY/adj_PEMS-BAY.pkl",
+  "INPUT_LENGTH": 12,
+  "OUTPUT_LENGTH": 12,
+  "NUM_NODES": 325,
+  "MODEL_NAME": "GraphWaveNet",
+  "MODEL": "basicts.models.GraphWaveNet",
+  "RUNNER": "GraphWaveNetRunner",
+  "MODEL_ARGS": {
+    "supports": [],
+    "aptinit": null,
+    "dropout": 0.3,
+    "gcn_bool": true,
+    "addaptadj": true,
+    "input_dim": 3,
+    "output_dim": 1,
+    "embed_dim": 5,
+    "residual_channels": 16,
+    "dilation_channels": 16,
+    "skip_channels": 64,
+    "end_channels": 128,
+    "kernel_size": 2,
+    "blocks": 2,
+    "layers": 2
+  },
+  "ADJ_TYPE": "sym_adj",
+  "TRAIN_NUM_EPOCHS": 1,
+  "TRAIN_BATCH_SIZE": 16,
+  "TRAIN_LEARNING_RATE": 0.001,
+  "TRAIN_WEIGHT_DECAY": 0.0001,
+  "TRAIN_EARLY_STOPPING_PATIENCE": -1,
+  "TRAIN_RATIO": 0.7,
+  "VAL_RATIO": 0.2,
+  "TEST_RATIO": 0.1,
+  "STEPS_PER_DAY": 288,
+  "VAL_BATCH_SIZE": 16,
+  "TEST_BATCH_SIZE": 16,
+  "LOSS_FUNCTION": "masked_mae",
+  "METRICS": [
+    "MAE",
+    "RMSE",
+    "MAPE"
+  ],
+  "LOG_DIR": "outputs/GraphWaveNet_PEMS-BAY_smoke",
+  "SAVE_MODEL": true,
+  "PRINT_FREQ": 10,
+  "MAX_TRAIN_SAMPLES": 100,
+  "MAX_VAL_SAMPLES": 50,
+  "MAX_TEST_SAMPLES": 50,
+  "NORMALIZE": true,
+  "ADD_TIME_OF_DAY": true,
+  "ADD_DAY_OF_WEEK": true
+}
+2026-08-31 23:41:23,620 - INFO - ============================================================
+2026-08-31 23:41:23,620 - INFO - 
+--- Epoch 1/1 ---
+2026-08-31 23:42:15,138 - INFO - Epoch 1 - Train Loss: 0.219443, MAE: 2.0708, RMSE: 4.6662, MAPE: 2.4006
+2026-08-31 23:42:25,080 - INFO - Epoch 1 - Val Loss: 0.212474, MAE: 2.0051, RMSE: 4.6751, MAPE: 2.1436
+2026-08-31 23:42:25,214 - INFO - Model saved to outputs/GraphWaveNet_PEMS-BAY_smoke\model_epoch_1.pth
+2026-08-31 23:42:25,214 - INFO - ------------------------------------------------------------
+2026-08-31 23:42:25,214 - INFO - 
+============================================================
+2026-08-31 23:42:25,214 - INFO - Training completed
+2026-08-31 23:42:25,214 - INFO - Best validation loss: 0.212474
+2026-08-31 23:42:25,214 - INFO - Best validation metrics: {'MAE': 2.0050835609436035, 'RMSE': 4.6750922203063965, 'MAPE': 2.1436095237731934}
+2026-08-31 23:42:25,216 - INFO - Training finished at 2026-08-31 23:42:25.216542
+2026-08-31 23:42:25,216 - INFO - ============================================================

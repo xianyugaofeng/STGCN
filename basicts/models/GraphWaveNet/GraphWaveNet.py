@@ -11,8 +11,8 @@ class NConv(nn.Module):
     def forward(self, x, A):
         # 对每个(batch, channel, time_step)切片 在节点维度做x @ A
         x = x.permute(0, 1, 3, 2) # [B, C, N, T] -> [B, C, T, N]
-        x = torch.matmul(x, A)
-        x = x.permute(0, 1, 2, 3) # [B, C, N, T]
+        x = torch.matmul(x, A) # [B, C, T, N] @ [N, N] -> [B, C, T, N]
+        x = x.permute(0, 1, 3, 2) # [B, C, T, N] -> [B, C, N, T]
         return x.contiguous()
 
 class GCN(nn.Module):
@@ -36,7 +36,7 @@ class GCN(nn.Module):
                 x1 = x2
         
         # 沿通道维度聚合
-        hidden = torch.cat(out, dim=-1)
+        hidden = torch.cat(out, dim=1)
         hidden = self.dropout(self.MLP(hidden))
         return hidden
 
@@ -121,7 +121,7 @@ class GraphWaveNet(nn.Module):
         
         self.end_conv1 = nn.Conv2d(in_channels=skip_channels, out_channels=end_channels, kernel_size=(1, 1), bias=True)
 
-        self.end_conv2 = nn.Conv2d(in_channels=end_channels, out_channels=output_dim, kernel_size=(1, 1), bias=True)
+        self.end_conv2 = nn.Conv2d(in_channels=end_channels, out_channels=self.output_length * self.output_dim, kernel_size=(1, 1), bias=True)
 
         self.receptive_field = receptive_field
     
@@ -179,9 +179,13 @@ class GraphWaveNet(nn.Module):
             x = self.bn[i](x)
         
         x = F.relu(skip)
+        if x.size(3) > 1:
+            x = x[..., -1:] # 输入长于感受野时只保留最后一个时间步的skip特征
         x = F.relu(self.end_conv1(x))
-        x = self.end_conv2(x)
+        x = self.end_conv2(x) # [B, output_length*output_dim, N, 1]
 
-        x = x.permute(0, 3, 2, 1).contiguous() # [B, C, N, T] -> [B, T, N, C]
+        b, _, n, _ = x.shape
+        x = x.view(b, self.output_length, self.output_dim, n) # 拆分通道为(T', C')
+        x = x.permute(0, 1, 3, 2).contiguous() # [B, output_length, N, output_dim]
         return x
 

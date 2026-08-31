@@ -24,7 +24,7 @@ def calculate_mape(pred, target, eps=1e-8):
         target_flow = target
     
     # 过滤流量小于50的值（避免小流量导致MAPE异常）
-    mask = (target_flow > 50).float()
+    mask = (target_flow != 0).float()
     if mask.sum() == 0:
         return 0.0
     

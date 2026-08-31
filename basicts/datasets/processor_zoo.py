@@ -162,7 +162,12 @@ class GraphWaveNetProcessor(BaseDataProcessor):
         if self.adj_file_path and os.path.exists(self.adj_file_path):
             print(f"[INFO] Loading adjacency matrix from {self.adj_file_path}")
             with open(self.adj_file_path, 'rb') as f:
-                adj_matrix = pickle.load(f)
+                try:
+                    adj_matrix = pickle.load(f)
+                except UnicodeDecodeError:
+                    # Handle Python 2 pickles
+                    f.seek(0)
+                    adj_matrix = pickle.load(f, encoding='latin1')
         else:
             print(f"[WARN] Adjacency matrix file not found: {self.adj_file_path}")
 

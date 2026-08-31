@@ -131,7 +131,7 @@ class PEMS_BAYDataset(Dataset):
         self.mode = mode
         self.steps_per_day = steps_per_day
         self.global_start = global_start
-        self.num_features = data.shape[-1]
+        self.num_features = 1
         self.data = self.add_temporal_features(data, add_time_of_day, add_day_of_week, steps_per_day, global_start)
         self.num_samples = self.data.shape[0] - input_length - output_length + 1
         self.indices = [(i, i + input_length, i + input_length + output_length)
@@ -151,17 +151,25 @@ class PEMS_BAYDataset(Dataset):
         T, N = df.shape
         data = np.expand_dims(df.values, axis=-1)
         feature_list = [data]
+        
+        # Convert index to datetime64 if it's not already
+        index = df.index
+        if index.dtype != np.dtype('datetime64[ns]'):
+            # Assume index is int64 timestamps (nanoseconds since epoch)
+            index = pd.to_datetime(index.values, unit='ns')
+        else:
+            index = pd.DatetimeIndex(index.values)
+        
         if add_time_of_day:
-            # 原始时间戳 - 日期零点
-            time_of_day = (df.index.values - df.index.values.astype("datetime64[D]")) / np.timedelta(1, "D")
-            # [T,] np.tile的重复参数[1, N, 1] 先把time_of_day提升为三维(1, 1, T)
+            # 时间戳 - 当天零点，归一化到 [0, 1]
+            time_of_day = (index.values - index.values.astype("datetime64[D]")) / np.timedelta64(1, "D")
             time_of_day_tiled = np.tile(time_of_day, [1, N, 1]).transpose(2, 1, 0)
-            feature_list.append(time_of_day_tiled) # [T, N, 1]
+            feature_list.append(time_of_day_tiled)
         
         if add_day_of_week:
-            day_of_week = df.index.dayofweek
+            day_of_week = index.dayofweek
             day_of_week_tiled = np.tile(day_of_week, [1, N, 1]).transpose(2, 1, 0)
-            feature_list.append(day_of_week_tiled) # [T, N, 1]
+            feature_list.append(day_of_week_tiled)
         
         data_with_features = np.concatenate(feature_list, axis=-1)
         return data_with_features

@@ -160,12 +160,14 @@ def main():
     # 创建Runner
     from basicts.runners import get_runner
     runner_name = config.get('RUNNER', 'BaseRunner')
-    runner = get_runner(runner_name)(config)
+    runner = get_runner(runner_name)(config, adj_matrix=adj_matrix)
     
     # 设置邻接矩阵
     if adj_matrix is not None:
-        runner.adj_matrix = adj_matrix
-        print(f'[INFO] Adjacency matrix shape: {adj_matrix.shape}')
+        if hasattr(adj_matrix, 'shape'):
+            print(f'[INFO] Adjacency matrix shape: {adj_matrix.shape}')
+        else:
+            print(f'[INFO] Adjacency matrix: list of {len(adj_matrix)} supports')
     
     # 设置normalizer
     if normalizer is not None:

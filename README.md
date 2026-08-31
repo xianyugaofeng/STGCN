@@ -13,6 +13,9 @@ python scripts/train.py -c configs/STID_PEMS04.json
 
 python scripts/train.py -c configs/STID_PEMS08_smoke.json
 python scripts/train.py -c configs/STID_PEMS08.json
+
+python scripts/train.py -c configs/GraphWaveNet_PEMS-BAY_smoke.json
+python scripts/train.py -c configs/GraphWaveNet_PEMS-BAY.json
 ```
 
 ## horizon-wise图绘制
