@@ -111,6 +111,7 @@ class BaseRunner:
             # 每次迭代都会吐出一个形状为(BATCH_SIZE, ...)的张量x和y
             x = x.to(self.device, dtype=torch.float32)
             y = y.to(self.device, dtype=torch.float32)
+            # (batch_size, input_length, num_nodes, channels)
             # 将数据移到GPU/CPU
             # 同时强制转为float32，避免因数据加载时产生float64导致后续计算慢或报错
             model_kwargs = self._get_model_kwargs()

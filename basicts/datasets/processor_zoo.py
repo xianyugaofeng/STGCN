@@ -162,24 +162,42 @@ class GraphWaveNetProcessor(BaseDataProcessor):
         if self.adj_file_path and os.path.exists(self.adj_file_path):
             print(f"[INFO] Loading adjacency matrix from {self.adj_file_path}")
             with open(self.adj_file_path, 'rb') as f:
-                adj_matrix = pickle.load(f) # 直接通过pickle.load反序列化得到adj_matrix，通常为(N, N)的矩阵
+                adj_matrix = pickle.load(f)
         else:
             print(f"[WARN] Adjacency matrix file not found: {self.adj_file_path}")
-            # CSV兜底已移交各Processor的create_adjacency_from_csv hook处理
 
-        # Train/Val/Test split (70%/20%/10%)
-        num_timesteps = raw_df.shape[0] # 总时间步数
-        train_end = int(num_timesteps * self.train_ratio) # 前70%作为训练集
-        val_end = train_end + int(num_timesteps * self.val_ratio) # 接着20%作为验证集, 10%为测试集
+        # Train/Val/Test split
+        num_timesteps = raw_df.shape[0]
+        train_end = int(num_timesteps * self.train_ratio)
+        val_end = train_end + int(num_timesteps * self.val_ratio)
 
         train_df = raw_df.iloc[:train_end]
         val_df = raw_df.iloc[train_end:val_end]
         test_df = raw_df.iloc[val_end:]
 
+        # Z-score normalization (fit on train, transform all)
+        normalizer = None
+        if self.normalize:
+            normalizer = Normalizer()
+            normalizer.fit(train_df.values)
+            
+            train_df = pd.DataFrame(
+                normalizer.transform(train_df.values), 
+                index=train_df.index, columns=train_df.columns
+            )
+            val_df = pd.DataFrame(
+                normalizer.transform(val_df.values), 
+                index=val_df.index, columns=val_df.columns
+            )
+            test_df = pd.DataFrame(
+                normalizer.transform(test_df.values), 
+                index=test_df.index, columns=test_df.columns
+            )
+            print(f"[INFO] Data normalized using Z-score")
+
         print(f"[INFO] Data loaded: train={train_df.shape}, val={val_df.shape}, test={test_df.shape}")
 
-        # 各切分在完整时间线上的全局起始下标 供GraphWaveNet等模型对齐时间特征
-        offsets = {'train': 0, 'val': train_end, 'test': val_end}
+        offsets = {'train': 0, 'val': int(len(raw_df) * self.train_ratio), 'test': int(len(raw_df) * (self.train_ratio + self.val_ratio))}
         return train_df, val_df, test_df, adj_matrix, normalizer, offsets
 
     def build_dataset(self, data, mode, global_start=0):

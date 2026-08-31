@@ -122,7 +122,7 @@ class STID(nn.Module):
             day_in_week_emb = None
 
         # time_series_embedding
-        batch_size, seq_len, num_nodes, channels = input_data.size()
+        batch_size, seq_len, num_nodes, channels = input_data.size() # [B, T, N, C]
         input_data = input_data.permute(0, 2, 1, 3).contiguous().view(batch_size, num_nodes, seq_len*channels) # [B, N, T*C]
         input_data = input_data.transpose(1, 2).unsqueeze(-1)    # [B, T*C, N, 1]
         time_series_emb = self.time_series_emb_layer(input_data) # [B, embed_dim, N, 1]

@@ -121,7 +121,7 @@ class STIDDataset(Dataset):
         data_with_features = np.concatenate(feature_list, axis=-1)
         return data_with_features
 
-class PEMS-BAYDataset(Dataset):
+class PEMS_BAYDataset(Dataset):
     # GraphWaveNet专用数据集:在(x, y)基础上附加时间特征(time_of_day, day_of_week)
     def __init__(self, data, input_length=12, output_length=12,
                  mode='train', steps_per_day=288, add_time_of_day=True, add_day_of_week=True,
@@ -164,17 +164,13 @@ class PEMS-BAYDataset(Dataset):
             feature_list.append(day_of_week_tiled) # [T, N, 1]
         
         data_with_features = np.concatenate(feature_list, axis=-1)
-
-        normalizer = Normalizer()
-        normalizer.fit(data_with_features)
-        print(f"[INFO] {self.mode.upper()} Data normalized using Z-score")
         return data_with_features
 
 DATASET_ZOO = {
     'PEMS': PEMSDataset,
     'STGCN': PEMSDataset,
     'STID': STIDDataset,
-    'GraphWaveNet': PEMS-BAYDataset
+    'GraphWaveNet': PEMS_BAYDataset
 }
 
 def get_dataset(dataset_name):
